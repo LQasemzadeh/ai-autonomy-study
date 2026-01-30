@@ -1,6 +1,30 @@
+"use client";
+
+import { useState } from "react";
+
 export default function Home() {
+  const [hasConsented, setHasConsented] = useState<boolean | null>(null);
+
+  if (hasConsented === false) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-start pt-24 sm:justify-center bg-white px-10 py-4 font-sans text-[#171717] selection:bg-blue-100 text-center">
+        <div className="flex w-full max-w-lg flex-col items-center">
+          <h1 className="mb-6 text-3xl font-bold tracking-tight text-blue-600 sm:text-4xl">
+            Thank you!
+          </h1>
+          <div className="space-y-1 text-[15px] leading-tight text-gray-700 sm:text-[16px]">
+            <p>You have decided not to participate in this study.</p>
+            <p>This decision is fully respected.</p>
+            <p>No data has been collected or stored.</p>
+            <p className="mt-4 font-medium text-gray-900">You may close this tab now.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-10 py-4 font-sans text-[#171717] selection:bg-blue-100">
+    <div className="flex min-h-screen flex-col items-center justify-start pt-20 sm:justify-center bg-white px-10 py-4 font-sans text-[#171717] selection:bg-blue-100">
       <div className="flex w-full max-w-lg flex-col items-center text-center">
         {/* Globe Icon */}
         <div className="mb-4 text-blue-600">
@@ -49,10 +73,16 @@ export default function Home() {
 
         {/* Buttons */}
         <div className="mt-6 flex w-full flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
-          <button className="h-10 w-full max-w-[200px] rounded-full bg-[#3b82f6] text-sm font-medium text-white transition-all hover:bg-blue-700 active:scale-[0.98]">
+          <button 
+            onClick={() => setHasConsented(true)}
+            className="h-10 w-full max-w-[200px] rounded-full bg-[#3b82f6] text-sm font-medium text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
+          >
             I consent
           </button>
-          <button className="h-10 w-full max-w-[200px] rounded-full bg-[#e5e7eb] text-sm font-medium text-gray-900 transition-all hover:bg-gray-300 active:scale-[0.98]">
+          <button 
+            onClick={() => setHasConsented(false)}
+            className="h-10 w-full max-w-[200px] rounded-full bg-[#e5e7eb] text-sm font-medium text-gray-900 transition-all hover:bg-gray-300 active:scale-[0.98]"
+          >
             I do not consent
           </button>
         </div>
