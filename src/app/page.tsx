@@ -1,13 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+type Mode = "Information" | "Assistance" | "Autonomous";
 
 export default function Home() {
   const [hasConsented, setHasConsented] = useState<boolean | null>(null);
+  const [participantId, setParticipantId] = useState("");
+  const [mode, setMode] = useState<Mode>("Information");
+  const [semester, setSemester] = useState("");
+  const [examPeriod, setExamPeriod] = useState("");
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [confirmed, setConfirmed] = useState(false);
+
+  useEffect(() => {
+    // Logic for random but balanced mode distribution could be more complex with a backend,
+    // but for a frontend-only demo, we'll use a simple rotation or random.
+    // To strictly follow the "1st: Info, 2nd: Assist, 3rd: Auto, 4th: Info..." rule 
+    // without a backend, we can use localStorage to track the count locally for this browser,
+    // but the prompt implies a more global balancing. For now, let's use a simple local rotation.
+    
+    const count = parseInt(localStorage.getItem("participant_count") || "0");
+    const modes: Mode[] = ["Information", "Assistance", "Autonomous"];
+    const assignedMode = modes[count % 3];
+    
+    setMode(assignedMode);
+    
+    // Generate Participant ID: P-8K2F9A style
+    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setParticipantId(`P-${randomStr}`);
+  }, [hasConsented]);
+
+  const handleConsent = () => {
+    const count = parseInt(localStorage.getItem("participant_count") || "0");
+    localStorage.setItem("participant_count", (count + 1).toString());
+    setHasConsented(true);
+  };
+
+  const handleCourseToggle = (course: string) => {
+    if (selectedCourses.includes(course)) {
+      setSelectedCourses(selectedCourses.filter(c => c !== course));
+    } else {
+      if (selectedCourses.length < 2) {
+        setSelectedCourses([...selectedCourses, course]);
+      }
+    }
+  };
 
   if (hasConsented === false) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-start pt-24 sm:justify-center bg-white px-10 py-4 font-sans text-[#171717] selection:bg-blue-100 text-center">
+      <div className="flex h-screen flex-col items-center justify-center bg-white px-10 font-sans text-[#171717] text-center overflow-hidden">
         <div className="flex w-full max-w-lg flex-col items-center">
           <h1 className="mb-6 text-3xl font-bold tracking-tight text-blue-600 sm:text-4xl">
             Thank you!
@@ -23,8 +65,128 @@ export default function Home() {
     );
   }
 
+  if (hasConsented === true) {
+    const wise2025Courses = [
+      "HCI (main)",
+      "Digital Bussiness Models (main)",
+      "Informationarchitechture (Skill allignment)",
+      "The User in Society (skill alignment)"
+    ];
+    const sose2026Courses = [
+      "Market Research (main)",
+      "Ethics (main)",
+      "Data Analytics (skill alignment)",
+      "User Behaviour Control (skill alignment)"
+    ];
+
+    const currentCourses = semester === "WiSe 2025" ? wise2025Courses : sose2026Courses;
+
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col h-fit max-h-full">
+          <h1 className="text-xl font-bold text-gray-900 mb-1 text-center">
+            Exam Registration: UX Management and Design
+          </h1>
+          <div className="flex justify-between text-sm text-gray-600 mb-6 px-2">
+            <span>Participant ID: <span className="font-mono font-bold text-blue-600">{participantId}</span></span>
+            <span>Mode: <span className="font-bold text-blue-600">{mode}</span></span>
+          </div>
+
+          <form className="space-y-4 overflow-y-auto pr-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+              <select 
+                value={semester}
+                onChange={(e) => {
+                  setSemester(e.target.value);
+                  setExamPeriod("");
+                  setSelectedCourses([]);
+                }}
+                className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+              >
+                <option value="">Select Semester</option>
+                <option value="WiSe 2025">WiSe 2025</option>
+                <option value="SoSe 2026">SoSe 2026</option>
+              </select>
+            </div>
+
+            {semester && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Exam Period</label>
+                  <select 
+                    value={examPeriod}
+                    onChange={(e) => setExamPeriod(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                  >
+                    <option value="">Select Period</option>
+                    {semester === "WiSe 2025" ? (
+                      <>
+                        <option value="1st Opp Jan-Feb">1st Opp Jan-Feb</option>
+                        <option value="2nd Retake Apr-May">2nd Retake Apr-May</option>
+                        <option value="3rd Retake Sep">3rd Retake Sep</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="1st Opp Jun-Jul">1st Opp Jun-Jul</option>
+                        <option value="2nd Retake Nov">2nd Retake Nov</option>
+                        <option value="3rd Retake Mar">3rd Retake Mar</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Course Selection (select exactly 2 exams):
+                  </label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {currentCourses.map((course) => (
+                      <label key={course} className="flex items-center p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedCourses.includes(course)}
+                          onChange={() => handleCourseToggle(course)}
+                          disabled={!selectedCourses.includes(course) && selectedCourses.length >= 2}
+                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-700">{course}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="pt-2">
+              <label className="flex items-start cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+                <span className="ml-3 text-xs text-gray-600 leading-normal">
+                  I confirm that I have reviewed my selection and understand the constraints and outcome.
+                </span>
+              </label>
+            </div>
+
+            <button
+              type="button"
+              disabled={!confirmed || selectedCourses.length !== 2 || !examPeriod}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all mt-4"
+            >
+              Submit
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-start pt-20 sm:justify-center bg-white px-10 py-4 font-sans text-[#171717] selection:bg-blue-100">
+    <div className="flex h-screen flex-col items-center justify-center bg-white px-10 font-sans text-[#171717] overflow-hidden">
       <div className="flex w-full max-w-lg flex-col items-center text-center">
         {/* Globe Icon */}
         <div className="mb-4 text-blue-600">
@@ -74,7 +236,7 @@ export default function Home() {
         {/* Buttons */}
         <div className="mt-6 flex w-full flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
           <button 
-            onClick={() => setHasConsented(true)}
+            onClick={handleConsent}
             className="h-10 w-full max-w-[200px] rounded-full bg-[#3b82f6] text-sm font-medium text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
           >
             I consent
