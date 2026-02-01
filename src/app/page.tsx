@@ -41,8 +41,19 @@ export default function Home() {
     if (selectedCourses.includes(course)) {
       setSelectedCourses(selectedCourses.filter(c => c !== course));
     } else {
-      if (selectedCourses.length < 2) {
+      // In Information mode, we might want to allow more than 2 to show the warning, 
+      // but the requirement says "Exactly 2 exams must be selected" warning.
+      // However, it also says "if they selected only one... submit should be active".
+      // Let's allow selecting up to 4 in Information mode to demonstrate the "exactly 2" warning if needed,
+      // or just keep the limit and show the warning when it's 1.
+      // Re-reading: "if the user didn't select two courses... Exactly 2 exams must be selected".
+      // Let's keep the toggle simple.
+      if (mode === "Information") {
         setSelectedCourses([...selectedCourses, course]);
+      } else {
+        if (selectedCourses.length < 2) {
+          setSelectedCourses([...selectedCourses, course]);
+        }
       }
     }
   };
@@ -80,6 +91,12 @@ export default function Home() {
     ];
 
     const currentCourses = semester === "WiSe 2025" ? wise2025Courses : sose2026Courses;
+
+    const isExactlyTwo = selectedCourses.length === 2;
+    const hasMainCourse = selectedCourses.some(course => course.toLowerCase().includes("(main)"));
+    
+    const showCountWarning = mode === "Information" && !isExactlyTwo && selectedCourses.length > 0;
+    const showMainWarning = mode === "Information" && isExactlyTwo && !hasMainCourse;
 
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
@@ -147,13 +164,19 @@ export default function Home() {
                           type="checkbox"
                           checked={selectedCourses.includes(course)}
                           onChange={() => handleCourseToggle(course)}
-                          disabled={!selectedCourses.includes(course) && selectedCourses.length >= 2}
+                          disabled={mode !== "Information" && !selectedCourses.includes(course) && selectedCourses.length >= 2}
                           className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="ml-3 text-sm text-gray-700">{course}</span>
                       </label>
                     ))}
                   </div>
+                  {showCountWarning && (
+                    <p className="text-amber-700 text-xs mt-2 ml-1">Exactly 2 exams must be selected.</p>
+                  )}
+                  {showMainWarning && (
+                    <p className="text-amber-700 text-xs mt-2 ml-1">At least one main exam is required.</p>
+                  )}
                 </div>
               </>
             )}
@@ -174,7 +197,12 @@ export default function Home() {
 
             <button
               type="button"
-              disabled={!confirmed || selectedCourses.length !== 2 || !examPeriod}
+              disabled={
+                !confirmed || 
+                !examPeriod || 
+                (mode !== "Information" && selectedCourses.length !== 2) ||
+                (selectedCourses.length === 0)
+              }
               className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all mt-4"
             >
               Submit
