@@ -48,7 +48,7 @@ export default function Home() {
       // or just keep the limit and show the warning when it's 1.
       // Re-reading: "if the user didn't select two courses... Exactly 2 exams must be selected".
       // Let's keep the toggle simple.
-      if (mode === "Information") {
+      if (mode === "Information" || mode === "Assistance") {
         setSelectedCourses([...selectedCourses, course]);
       } else {
         if (selectedCourses.length < 2) {
@@ -95,8 +95,8 @@ export default function Home() {
     const isExactlyTwo = selectedCourses.length === 2;
     const hasMainCourse = selectedCourses.some(course => course.toLowerCase().includes("(main)"));
     
-    const showCountWarning = mode === "Information" && !isExactlyTwo && selectedCourses.length > 0;
-    const showMainWarning = mode === "Information" && isExactlyTwo && !hasMainCourse;
+    const showCountWarning = (mode === "Information" || mode === "Assistance") && !isExactlyTwo && selectedCourses.length > 0;
+    const showMainWarning = (mode === "Information" || mode === "Assistance") && isExactlyTwo && !hasMainCourse;
 
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
@@ -164,7 +164,7 @@ export default function Home() {
                           type="checkbox"
                           checked={selectedCourses.includes(course)}
                           onChange={() => handleCourseToggle(course)}
-                          disabled={mode !== "Information" && !selectedCourses.includes(course) && selectedCourses.length >= 2}
+                          disabled={(mode !== "Information" && mode !== "Assistance") && !selectedCourses.includes(course) && selectedCourses.length >= 2}
                           className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="ml-3 text-sm text-gray-700">{course}</span>
@@ -200,7 +200,8 @@ export default function Home() {
               disabled={
                 !confirmed || 
                 !examPeriod || 
-                (mode !== "Information" && selectedCourses.length !== 2) ||
+                (mode === "Assistance" && (!isExactlyTwo || !hasMainCourse)) ||
+                (mode === "Autonomous" && !isExactlyTwo) ||
                 (selectedCourses.length === 0)
               }
               className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all mt-4"
