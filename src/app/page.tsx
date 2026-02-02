@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-type Mode = "Information" | "Assistance" | "Autonomous";
+type Mode = "Information" | "Assistance" | "Execution";
 
 export default function Home() {
   const [hasConsented, setHasConsented] = useState<boolean | null>(null);
@@ -15,94 +15,124 @@ export default function Home() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [animateError, setAnimateError] = useState(false);
+
   const [sessionId] = useState(() => {
-    // Check if we have an existing session in current navigation
+    // Generate a unique session ID for this browser tab session.
+    // To ensure it's unique even if participant_id is generated later, 
+    // we use a random string.
     if (typeof window !== 'undefined') {
       const existing = sessionStorage.getItem("current_session_id");
       if (existing) return existing;
-      const newId = Math.random().toString(36).substring(2, 15);
+      const newId = `S-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
       sessionStorage.setItem("current_session_id", newId);
       return newId;
     }
-    return Math.random().toString(36).substring(2, 15);
+    return `S-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
   });
-  const [eventSeq, setEventSeq] = useState(0);
-
+  
   // --- SUPABASE CONFIGURATION ---
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY || "";
 
   // Helper to log events
-  const logEvent = async (action: string, details: any = {}) => {
-    const currentSeq = eventSeq + 1;
-    setEventSeq(currentSeq);
+  const logEvent = (action: string, details: any = {}, actor: "user" | "system" = "user") => {
+    // Access the global ref directly to ensure we always have the latest value 
+    // across all possible re-renders and closures
+    const globalSeqRef = (window as any)._eventSeqRef;
+    
+    // Add to queue to prevent race conditions and ensure strict ordering
+    if (typeof window !== 'undefined' && globalSeqRef) {
+      (window as any)._logQueue = ((window as any)._logQueue || Promise.resolve()).then(async () => {
+        globalSeqRef.current += 1;
+        const currentSeq = globalSeqRef.current;
+        sessionStorage.setItem("last_event_seq", currentSeq.toString());
 
-    const attemptId = typeof window !== 'undefined' ? sessionStorage.getItem(`attempts_${sessionId}`) : null;
+        const attemptId = sessionStorage.getItem(`attempts_${sessionId}`);
 
-    const eventData = {
-      participant_id: participantId,
-      session_id: sessionId,
-      attempt_id: attemptId ? parseInt(attemptId) : 1,
-      event_seq: currentSeq,
-      client_ts_ms: Date.now(),
-      mode: mode,
-      timestamp_iso: new Date().toISOString(),
-      action: action,
-      details: details,
-      current_step: isSubmitted ? "Submitted" : (hasConsented ? "Form" : "Consent")
-    };
-    
-    // 1. Log to console for debugging
-    console.log("LOG_EVENT:", eventData);
-    
-    // 2. Send to Supabase
-    const isPlaceholder = SUPABASE_KEY.includes("YOUR_ANON_PUBLIC_KEY") || SUPABASE_KEY === "";
-    
-    if (!isPlaceholder) {
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/study_logs`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          },
-          body: JSON.stringify(eventData)
-        });
-      } catch (error) {
-        console.error("Failed to send log to Supabase:", error);
-      }
+        const getCurrentStep = () => {
+          if (isSubmitted) return "ThankYou";
+          if (hasConsented === true) return "Form";
+          if (hasConsented === false) return "Declined";
+          return "Consent";
+        };
+
+        const eventData = {
+          participant_id: participantId,
+          session_id: sessionId,
+          attempt_id: attemptId ? parseInt(attemptId) : 1,
+          event_seq: currentSeq,
+          client_ts_ms: Date.now(),
+          mode: mode,
+          actor: actor,
+          timestamp_iso: new Date().toISOString(),
+          action: action,
+          details: details,
+          current_step: getCurrentStep()
+        };
+        
+        // 1. Log to console for debugging
+        console.log("LOG_EVENT:", eventData);
+        
+        // 2. Send to Supabase
+        const isPlaceholder = SUPABASE_KEY.includes("YOUR_ANON_PUBLIC_KEY") || SUPABASE_KEY === "";
+        
+        if (!isPlaceholder) {
+          try {
+            await fetch(`${SUPABASE_URL}/rest/v1/study_logs`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+              },
+              body: JSON.stringify(eventData)
+            });
+          } catch (error) {
+            console.error("Failed to send log to Supabase:", error);
+          }
+        }
+      });
     }
   };
 
   useEffect(() => {
-    // Initial landing log
-    if (participantId) {
-      // Get or create attempt ID for this session
-      const attemptCount = parseInt(sessionStorage.getItem(`attempts_${sessionId}`) || "0") + 1;
-      sessionStorage.setItem(`attempts_${sessionId}`, attemptCount.toString());
-      
+    // Generate Participant ID: P-8K2F9A style
+    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const newParticipantId = `P-${randomStr}`;
+    setParticipantId(newParticipantId);
+
+    // Initial landing log with the fresh ID
+    // Get or create attempt ID for this session
+    const attemptCount = parseInt(sessionStorage.getItem(`attempts_${sessionId}`) || "0") + 1;
+    sessionStorage.setItem(`attempts_${sessionId}`, attemptCount.toString());
+    
+    // Ensure the ref is attached to window immediately and correctly initialized
+    const initialSeq = parseInt(sessionStorage.getItem("last_event_seq") || "0");
+    if (!(window as any)._eventSeqRef) {
+      (window as any)._eventSeqRef = { current: initialSeq };
+    }
+    if (!(window as any)._logQueue) {
+      (window as any)._logQueue = Promise.resolve();
+    }
+
+    // A small helper to log the first event with the correct ID immediately
+    const logInitialEvent = async () => {
+      // Small delay to ensure everything is initialized
+      await new Promise(resolve => setTimeout(resolve, 100));
       logEvent("PAGE_VIEW", { 
         section: "Landing/Consent",
         info: "New session/page load"
       });
-    }
-  }, [participantId, sessionId]);
-
-  useEffect(() => {
-    // Strict sequential rotation: Information -> Assistance -> Autonomous
-    const modes: Mode[] = ["Information", "Assistance", "Autonomous"];
+    };
     
-    // Get the current participant count to determine the mode
+    logInitialEvent();
+
+    // Strict sequential rotation: Information -> Assistance -> Execution
+    const modes: Mode[] = ["Information", "Assistance", "Execution"];
     const count = parseInt(localStorage.getItem("participant_count") || "0");
     const assignedMode = modes[count % 3];
-    
     setMode(assignedMode);
-    
-    // Generate Participant ID: P-8K2F9A style
-    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setParticipantId(`P-${randomStr}`);
-  }, [hasConsented]);
+  }, []);
 
   const handleConsent = () => {
     const count = parseInt(localStorage.getItem("participant_count") || "0");
@@ -140,7 +170,7 @@ export default function Home() {
         logEvent("SUBMIT_ERROR", { 
           reason: !isExactlyTwo ? "not_exactly_two" : "no_main_course",
           ...snapshot 
-        });
+        }, "system");
         setTimeout(() => setAnimateError(false), 600);
         return;
       }
@@ -259,7 +289,7 @@ export default function Home() {
                   setSemester(selectedSemester);
                   logEvent("CHANGE_SEMESTER", { value: selectedSemester });
                   
-                  if (mode === "Autonomous" && selectedSemester) {
+                  if (mode === "Execution" && selectedSemester) {
                     // Auto-select 1st Opp
                     const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
                     setExamPeriod(period);
@@ -289,8 +319,8 @@ export default function Home() {
                       semester: selectedSemester,
                       examPeriod: period,
                       selectedCourses: autoSelected,
-                      reason: "Autonomous mode auto-selection"
-                    });
+                      reason: "Execution mode auto-selection"
+                    }, "system");
                   } else {
                     setExamPeriod("");
                     setSelectedCourses([]);
@@ -317,8 +347,8 @@ export default function Home() {
                       setExamPeriod(val);
                       logEvent("CHANGE_EXAM_PERIOD", { value: val });
                     }}
-                    disabled={mode === "Autonomous"}
-                    className={`w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${mode === "Autonomous" ? "bg-gray-50 cursor-not-allowed opacity-75" : "bg-white"}`}
+                    disabled={mode === "Execution"}
+                    className={`w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${mode === "Execution" ? "bg-gray-50 cursor-not-allowed opacity-75" : "bg-white"}`}
                   >
                     <option value="">Select Period</option>
                     {semester === "WiSe 2025" ? (
@@ -349,15 +379,15 @@ export default function Home() {
                     mode === "Assistance" && animateError ? "animate-shake" : ""
                   }`}>
                     {currentCourses.map((course) => (
-                      <label key={course} className={`flex items-center p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Autonomous" ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
+                      <label key={course} className={`flex items-center p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
                         <input
                           type="checkbox"
                           checked={selectedCourses.includes(course)}
                           onChange={() => handleCourseToggle(course)}
-                          disabled={mode === "Autonomous" || ((mode !== "Information" && mode !== "Assistance") && !selectedCourses.includes(course) && selectedCourses.length >= 2)}
-                          className={`w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${mode === "Autonomous" && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50"}`}
+                          disabled={mode === "Execution" || ((mode !== "Information" && mode !== "Assistance") && !selectedCourses.includes(course) && selectedCourses.length >= 2)}
+                          className={`w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${mode === "Execution" && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50"}`}
                         />
-                        <span className={`ml-3 text-sm ${mode === "Autonomous" && selectedCourses.includes(course) ? "text-blue-700 font-medium" : "text-gray-700"}`}>{course}</span>
+                        <span className={`ml-3 text-sm ${mode === "Execution" && selectedCourses.includes(course) ? "text-blue-700 font-medium" : "text-gray-700"}`}>{course}</span>
                       </label>
                     ))}
                   </div>
@@ -402,14 +432,14 @@ export default function Home() {
                 disabled={
                   !confirmed || 
                   !examPeriod || 
-                  (mode === "Autonomous" && !isExactlyTwo) ||
+                  (mode === "Execution" && !isExactlyTwo) ||
                   (selectedCourses.length === 0)
                 }
-                className={`${mode === "Autonomous" ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
+                className={`${mode === "Execution" ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
               >
                 Submit
               </button>
-              {mode === "Autonomous" && (
+              {mode === "Execution" && (
                 <button
                   type="button"
                   onClick={() => {
