@@ -15,6 +15,18 @@ export default function Home() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [animateError, setAnimateError] = useState(false);
+  const [sessionId] = useState(() => {
+    // Check if we have an existing session in current navigation
+    if (typeof window !== 'undefined') {
+      const existing = sessionStorage.getItem("current_session_id");
+      if (existing) return existing;
+      const newId = Math.random().toString(36).substring(2, 15);
+      sessionStorage.setItem("current_session_id", newId);
+      return newId;
+    }
+    return Math.random().toString(36).substring(2, 15);
+  });
+  const [eventSeq, setEventSeq] = useState(0);
 
   // --- SUPABASE CONFIGURATION ---
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -22,8 +34,17 @@ export default function Home() {
 
   // Helper to log events
   const logEvent = async (action: string, details: any = {}) => {
+    const currentSeq = eventSeq + 1;
+    setEventSeq(currentSeq);
+
+    const attemptId = typeof window !== 'undefined' ? sessionStorage.getItem(`attempts_${sessionId}`) : null;
+
     const eventData = {
       participant_id: participantId,
+      session_id: sessionId,
+      attempt_id: attemptId ? parseInt(attemptId) : 1,
+      event_seq: currentSeq,
+      client_ts_ms: Date.now(),
       mode: mode,
       timestamp_iso: new Date().toISOString(),
       action: action,
@@ -57,9 +78,16 @@ export default function Home() {
   useEffect(() => {
     // Initial landing log
     if (participantId) {
-      logEvent("PAGE_VIEW", { section: "Landing/Consent" });
+      // Get or create attempt ID for this session
+      const attemptCount = parseInt(sessionStorage.getItem(`attempts_${sessionId}`) || "0") + 1;
+      sessionStorage.setItem(`attempts_${sessionId}`, attemptCount.toString());
+      
+      logEvent("PAGE_VIEW", { 
+        section: "Landing/Consent",
+        info: "New session/page load"
+      });
     }
-  }, [participantId]);
+  }, [participantId, sessionId]);
 
   useEffect(() => {
     // Logic for random but balanced mode distribution could be more complex with a backend,
@@ -91,30 +119,38 @@ export default function Home() {
     const isExactlyTwo = selectedCourses.length === 2;
     const hasMainCourse = selectedCourses.some(c => c.includes("(main)"));
     const isValid = isExactlyTwo && hasMainCourse;
+    
+    const errors = [];
+    if (!isExactlyTwo) errors.push("NEED_EXACTLY_2");
+    if (!hasMainCourse) errors.push("NEED_MAIN_COURSE");
 
-    logEvent("SUBMIT_CLICK", { 
-      isValid, 
-      selectedCourses, 
-      semester, 
-      examPeriod 
-    });
+    const snapshot = {
+      semester,
+      examPeriod,
+      selectedCourses,
+      confirmChecked: confirmed,
+      isValid,
+      errors,
+      mode
+    };
+
+    logEvent("SUBMIT_CLICK", snapshot);
 
     if (mode === "Assistance") {
       if (!isValid) {
         setShowErrors(true);
         setAnimateError(true);
-        logEvent("SUBMIT_ERROR", { reason: !isExactlyTwo ? "not_exactly_two" : "no_main_course" });
+        logEvent("SUBMIT_ERROR", { 
+          reason: !isExactlyTwo ? "not_exactly_two" : "no_main_course",
+          ...snapshot 
+        });
         setTimeout(() => setAnimateError(false), 600);
         return;
       }
     }
 
     setIsSubmitted(true);
-    logEvent("SUBMIT_SUCCESS", { 
-      isValid,
-      mode,
-      details: { semester, examPeriod, selectedCourses }
-    });
+    logEvent("SUBMIT_SUCCESS", snapshot);
     logEvent("PAGE_VIEW", { section: "ThankYou" });
   };
 
@@ -251,6 +287,13 @@ export default function Home() {
                     if (mainCourse) autoSelected.push(mainCourse);
                     if (skillCourse) autoSelected.push(skillCourse);
                     setSelectedCourses(autoSelected);
+
+                    logEvent("SYSTEM_AUTOFILL", {
+                      semester: selectedSemester,
+                      examPeriod: period,
+                      selectedCourses: autoSelected,
+                      reason: "Autonomous mode auto-selection"
+                    });
                   } else {
                     setExamPeriod("");
                     setSelectedCourses([]);
