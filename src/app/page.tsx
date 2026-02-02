@@ -90,14 +90,11 @@ export default function Home() {
   }, [participantId, sessionId]);
 
   useEffect(() => {
-    // Logic for random but balanced mode distribution could be more complex with a backend,
-    // but for a frontend-only demo, we'll use a simple rotation or random.
-    // To strictly follow the "1st: Info, 2nd: Assist, 3rd: Auto, 4th: Info..." rule 
-    // without a backend, we can use localStorage to track the count locally for this browser,
-    // but the prompt implies a more global balancing. For now, let's use a simple local rotation.
-    
-    const count = parseInt(localStorage.getItem("participant_count") || "0");
+    // Strict sequential rotation: Information -> Assistance -> Autonomous
     const modes: Mode[] = ["Information", "Assistance", "Autonomous"];
+    
+    // Get the current participant count to determine the mode
+    const count = parseInt(localStorage.getItem("participant_count") || "0");
     const assignedMode = modes[count % 3];
     
     setMode(assignedMode);
@@ -320,7 +317,8 @@ export default function Home() {
                       setExamPeriod(val);
                       logEvent("CHANGE_EXAM_PERIOD", { value: val });
                     }}
-                    className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                    disabled={mode === "Autonomous"}
+                    className={`w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${mode === "Autonomous" ? "bg-gray-50 cursor-not-allowed opacity-75" : "bg-white"}`}
                   >
                     <option value="">Select Period</option>
                     {semester === "WiSe 2025" ? (
@@ -351,15 +349,15 @@ export default function Home() {
                     mode === "Assistance" && animateError ? "animate-shake" : ""
                   }`}>
                     {currentCourses.map((course) => (
-                      <label key={course} className="flex items-center p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors">
+                      <label key={course} className={`flex items-center p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Autonomous" ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
                         <input
                           type="checkbox"
                           checked={selectedCourses.includes(course)}
                           onChange={() => handleCourseToggle(course)}
-                          disabled={(mode !== "Information" && mode !== "Assistance") && !selectedCourses.includes(course) && selectedCourses.length >= 2}
-                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                          disabled={mode === "Autonomous" || ((mode !== "Information" && mode !== "Assistance") && !selectedCourses.includes(course) && selectedCourses.length >= 2)}
+                          className={`w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${mode === "Autonomous" && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50"}`}
                         />
-                        <span className="ml-3 text-sm text-gray-700">{course}</span>
+                        <span className={`ml-3 text-sm ${mode === "Autonomous" && selectedCourses.includes(course) ? "text-blue-700 font-medium" : "text-gray-700"}`}>{course}</span>
                       </label>
                     ))}
                   </div>
