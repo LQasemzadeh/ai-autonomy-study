@@ -12,6 +12,54 @@ export default function Home() {
   const [examPeriod, setExamPeriod] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [confirmed, setConfirmed] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+  const [animateError, setAnimateError] = useState(false);
+
+  // --- SUPABASE CONFIGURATION ---
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY || "";
+
+  // Helper to log events
+  const logEvent = async (action: string, details: any = {}) => {
+    const eventData = {
+      participant_id: participantId,
+      mode: mode,
+      timestamp_iso: new Date().toISOString(),
+      action: action,
+      details: details,
+      current_step: isSubmitted ? "Submitted" : (hasConsented ? "Form" : "Consent")
+    };
+    
+    // 1. Log to console for debugging
+    console.log("LOG_EVENT:", eventData);
+    
+    // 2. Send to Supabase
+    const isPlaceholder = SUPABASE_KEY.includes("YOUR_ANON_PUBLIC_KEY") || SUPABASE_KEY === "";
+    
+    if (!isPlaceholder) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/study_logs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          },
+          body: JSON.stringify(eventData)
+        });
+      } catch (error) {
+        console.error("Failed to send log to Supabase:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Initial landing log
+    if (participantId) {
+      logEvent("PAGE_VIEW", { section: "Landing/Consent" });
+    }
+  }, [participantId]);
 
   useEffect(() => {
     // Logic for random but balanced mode distribution could be more complex with a backend,
@@ -35,9 +83,48 @@ export default function Home() {
     const count = parseInt(localStorage.getItem("participant_count") || "0");
     localStorage.setItem("participant_count", (count + 1).toString());
     setHasConsented(true);
+    logEvent("CONSENT_GIVEN");
+    logEvent("PAGE_VIEW", { section: "Form" });
+  };
+
+  const handleSubmit = () => {
+    const isExactlyTwo = selectedCourses.length === 2;
+    const hasMainCourse = selectedCourses.some(c => c.includes("(main)"));
+    const isValid = isExactlyTwo && hasMainCourse;
+
+    logEvent("SUBMIT_CLICK", { 
+      isValid, 
+      selectedCourses, 
+      semester, 
+      examPeriod 
+    });
+
+    if (mode === "Assistance") {
+      if (!isValid) {
+        setShowErrors(true);
+        setAnimateError(true);
+        logEvent("SUBMIT_ERROR", { reason: !isExactlyTwo ? "not_exactly_two" : "no_main_course" });
+        setTimeout(() => setAnimateError(false), 600);
+        return;
+      }
+    }
+
+    setIsSubmitted(true);
+    logEvent("SUBMIT_SUCCESS", { 
+      isValid,
+      mode,
+      details: { semester, examPeriod, selectedCourses }
+    });
+    logEvent("PAGE_VIEW", { section: "ThankYou" });
   };
 
   const handleCourseToggle = (course: string) => {
+    // Reset errors when user makes a change
+    setShowErrors(false);
+
+    const isSelecting = !selectedCourses.includes(course);
+    logEvent("TOGGLE_COURSE", { course, action: isSelecting ? "select" : "deselect" });
+
     if (selectedCourses.includes(course)) {
       setSelectedCourses(selectedCourses.filter(c => c !== course));
     } else {
@@ -76,6 +163,26 @@ export default function Home() {
     );
   }
 
+  if (isSubmitted) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-white px-10 font-sans text-[#171717] text-center overflow-hidden">
+        <div className="flex w-full max-w-lg flex-col items-center">
+          <h1 className="mb-4 text-2xl font-bold tracking-tight text-green-600 sm:text-3xl">
+            Thank You!
+          </h1>
+          <div className="space-y-2">
+            <p className="text-lg font-medium text-gray-800">
+              your exam registratiomhas been submitted successfully.
+            </p>
+            <p className="text-sm text-gray-500">
+              you may now close this tab.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (hasConsented === true) {
     const wise2025Courses = [
       "HCI (main)",
@@ -95,8 +202,8 @@ export default function Home() {
     const isExactlyTwo = selectedCourses.length === 2;
     const hasMainCourse = selectedCourses.some(course => course.toLowerCase().includes("(main)"));
     
-    const showCountWarning = (mode === "Information" || mode === "Assistance") && !isExactlyTwo && selectedCourses.length > 0;
-    const showMainWarning = (mode === "Information" || mode === "Assistance") && isExactlyTwo && !hasMainCourse;
+    const showCountWarning = ((mode === "Information" || mode === "Assistance") && !isExactlyTwo && selectedCourses.length > 0) || (mode === "Assistance" && showErrors && !isExactlyTwo);
+    const showMainWarning = ((mode === "Information" || mode === "Assistance") && isExactlyTwo && !hasMainCourse) || (mode === "Assistance" && showErrors && isExactlyTwo && !hasMainCourse);
 
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
@@ -115,9 +222,41 @@ export default function Home() {
               <select 
                 value={semester}
                 onChange={(e) => {
-                  setSemester(e.target.value);
-                  setExamPeriod("");
-                  setSelectedCourses([]);
+                  const selectedSemester = e.target.value;
+                  setSemester(selectedSemester);
+                  logEvent("CHANGE_SEMESTER", { value: selectedSemester });
+                  
+                  if (mode === "Autonomous" && selectedSemester) {
+                    // Auto-select 1st Opp
+                    const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
+                    setExamPeriod(period);
+                    
+                    // Auto-select one main and one skill alignment
+                    const courses = selectedSemester === "WiSe 2025" ? [
+                      "HCI (main)",
+                      "Digital Bussiness Models (main)",
+                      "Informationarchitechture (Skill allignment)",
+                      "The User in Society (skill alignment)"
+                    ] : [
+                      "Market Research (main)",
+                      "Ethics (main)",
+                      "Data Analytics (skill alignment)",
+                      "User Behaviour Control (skill alignment)"
+                    ];
+                    
+                    const mainCourse = courses.find(c => c.toLowerCase().includes("(main)"));
+                    const skillCourse = courses.find(c => c.toLowerCase().includes("(skill alignment)") || c.toLowerCase().includes("(skill allignment)"));
+                    
+                    const autoSelected = [];
+                    if (mainCourse) autoSelected.push(mainCourse);
+                    if (skillCourse) autoSelected.push(skillCourse);
+                    setSelectedCourses(autoSelected);
+                  } else {
+                    setExamPeriod("");
+                    setSelectedCourses([]);
+                  }
+                  setConfirmed(false);
+                  setShowErrors(false);
                 }}
                 className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
               >
@@ -133,7 +272,11 @@ export default function Home() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Exam Period</label>
                   <select 
                     value={examPeriod}
-                    onChange={(e) => setExamPeriod(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setExamPeriod(val);
+                      logEvent("CHANGE_EXAM_PERIOD", { value: val });
+                    }}
                     className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
                   >
                     <option value="">Select Period</option>
@@ -157,7 +300,13 @@ export default function Home() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Course Selection (select exactly 2 exams):
                   </label>
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className={`grid grid-cols-1 gap-2 p-2 rounded-xl transition-all duration-300 ${
+                    mode === "Assistance" && showErrors 
+                      ? "border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] ring-2 ring-red-100" 
+                      : "border border-transparent"
+                  } ${
+                    mode === "Assistance" && animateError ? "animate-shake" : ""
+                  }`}>
                     {currentCourses.map((course) => (
                       <label key={course} className="flex items-center p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors">
                         <input
@@ -172,10 +321,16 @@ export default function Home() {
                     ))}
                   </div>
                   {showCountWarning && (
-                    <p className="text-amber-700 text-xs mt-2 ml-1">Exactly 2 exams must be selected.</p>
+                    <p className="text-amber-700 text-xs mt-2 ml-1">
+                      {mode === "Assistance" && showErrors && <span className="text-red-600 font-bold">ERROR: </span>}
+                      Exactly 2 exams must be selected.
+                    </p>
                   )}
                   {showMainWarning && (
-                    <p className="text-amber-700 text-xs mt-2 ml-1">At least one main exam is required.</p>
+                    <p className="text-amber-700 text-xs mt-2 ml-1">
+                      {mode === "Assistance" && showErrors && <span className="text-red-600 font-bold">ERROR: </span>}
+                      At least one main exam is required.
+                    </p>
                   )}
                 </div>
               </>
@@ -186,7 +341,11 @@ export default function Home() {
                 <input
                   type="checkbox"
                   checked={confirmed}
-                  onChange={(e) => setConfirmed(e.target.checked)}
+                  onChange={(e) => {
+                    const val = e.target.checked;
+                    setConfirmed(val);
+                    logEvent("CONFIRM_CHECKBOX", { confirmed: val });
+                  }}
                   className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                 />
                 <span className="ml-3 text-xs text-gray-600 leading-normal">
@@ -195,19 +354,36 @@ export default function Home() {
               </label>
             </div>
 
-            <button
-              type="button"
-              disabled={
-                !confirmed || 
-                !examPeriod || 
-                (mode === "Assistance" && (!isExactlyTwo || !hasMainCourse)) ||
-                (mode === "Autonomous" && !isExactlyTwo) ||
-                (selectedCourses.length === 0)
-              }
-              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all mt-4"
-            >
-              Submit
-            </button>
+            <div className="flex gap-2 mt-4">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={
+                  !confirmed || 
+                  !examPeriod || 
+                  (mode === "Autonomous" && !isExactlyTwo) ||
+                  (selectedCourses.length === 0)
+                }
+                className={`${mode === "Autonomous" ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
+              >
+                Submit
+              </button>
+              {mode === "Autonomous" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    logEvent("UNDO_CLICK");
+                    setSemester("");
+                    setExamPeriod("");
+                    setSelectedCourses([]);
+                    setConfirmed(false);
+                  }}
+                  className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-sm hover:bg-indigo-200 transition-all"
+                >
+                  Undo
+                </button>
+              )}
+            </div>
           </form>
         </div>
       </div>
@@ -271,7 +447,10 @@ export default function Home() {
             I consent
           </button>
           <button 
-            onClick={() => setHasConsented(false)}
+            onClick={() => {
+              logEvent("CONSENT_DECLINED");
+              setHasConsented(false);
+            }}
             className="h-10 w-full max-w-[200px] rounded-full bg-[#e5e7eb] text-sm font-medium text-gray-900 transition-all hover:bg-gray-300 active:scale-[0.98]"
           >
             I do not consent
