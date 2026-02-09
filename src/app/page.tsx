@@ -127,16 +127,24 @@ export default function Home() {
     
     logInitialEvent();
 
-    // Strict sequential rotation: Information -> Assistance -> Execution
+    // Randomize mode assignment: Information, Assistance, or Execution
+    // Use sessionStorage to keep the same mode if they refresh within the same session
     const modes: Mode[] = ["Information", "Assistance", "Execution"];
-    const count = parseInt(localStorage.getItem("participant_count") || "0");
-    const assignedMode = modes[count % 3];
+    const cachedMode = sessionStorage.getItem("assigned_mode") as Mode | null;
+    
+    let assignedMode: Mode;
+    if (cachedMode && modes.includes(cachedMode)) {
+      assignedMode = cachedMode;
+    } else {
+      const randomIndex = Math.floor(Math.random() * 3);
+      assignedMode = modes[randomIndex];
+      sessionStorage.setItem("assigned_mode", assignedMode);
+    }
+    
     setMode(assignedMode);
   }, []);
 
   const handleConsent = () => {
-    const count = parseInt(localStorage.getItem("participant_count") || "0");
-    localStorage.setItem("participant_count", (count + 1).toString());
     setHasConsented(true);
     logEvent("CONSENT_GIVEN");
     logEvent("PAGE_VIEW", { section: "Form" });
