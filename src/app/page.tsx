@@ -15,6 +15,7 @@ export default function Home() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [animateError, setAnimateError] = useState(false);
+  const [isEditable, setIsEditable] = useState(false);
 
   const [sessionId] = useState(() => {
     // Generate a unique session ID for this browser tab session.
@@ -297,46 +298,59 @@ export default function Home() {
                   setSemester(selectedSemester);
                   logEvent("CHANGE_SEMESTER", { value: selectedSemester });
                   
-                  if (mode === "Execution" && selectedSemester) {
-                    // Auto-select 1st Opp
-                    const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
-                    setExamPeriod(period);
-                    
-                    // Auto-select one main and one skill alignment
-                    const courses = selectedSemester === "WiSe 2025" ? [
-                      "HCI (main)",
-                      "Digital Bussiness Models (main)",
-                      "Informationarchitechture (Skill allignment)",
-                      "The User in Society (skill alignment)"
-                    ] : [
-                      "Market Research (main)",
-                      "Ethics (main)",
-                      "Data Analytics (skill alignment)",
-                      "User Behaviour Control (skill alignment)"
-                    ];
-                    
-                    const mainCourse = courses.find(c => c.toLowerCase().includes("(main)"));
-                    const skillCourse = courses.find(c => c.toLowerCase().includes("(skill alignment)") || c.toLowerCase().includes("(skill allignment)"));
-                    
-                    const autoSelected = [];
-                    if (mainCourse) autoSelected.push(mainCourse);
-                    if (skillCourse) autoSelected.push(skillCourse);
-                    setSelectedCourses(autoSelected);
+                  // Reset editable state and errors on any semester change
+                  setIsEditable(false);
+                  setConfirmed(false);
+                  setShowErrors(false);
+                  
+                  if (mode === "Execution" || mode === "Assistance") {
+                    if (selectedSemester) {
+                      // Auto-select 1st Opp
+                      const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
+                      setExamPeriod(period);
+                      
+                      // Auto-select one main and one skill alignment
+                      const courses = selectedSemester === "WiSe 2025" ? [
+                        "HCI (main)",
+                        "Digital Bussiness Models (main)",
+                        "Informationarchitechture (Skill allignment)",
+                        "The User in Society (skill alignment)"
+                      ] : [
+                        "Market Research (main)",
+                        "Ethics (main)",
+                        "Data Analytics (skill alignment)",
+                        "User Behaviour Control (skill alignment)"
+                      ];
+                      
+                      const mainCourse = courses.find(c => c.toLowerCase().includes("(main)"));
+                      const skillCourse = courses.find(c => c.toLowerCase().includes("(skill alignment)") || c.toLowerCase().includes("(skill allignment)"));
+                      
+                      const autoSelected = [];
+                      if (mainCourse) autoSelected.push(mainCourse);
+                      if (skillCourse) autoSelected.push(skillCourse);
+                      setSelectedCourses(autoSelected);
 
-                    logEvent("SYSTEM_AUTOFILL", {
-                      semester: selectedSemester,
-                      examPeriod: period,
-                      selectedCourses: autoSelected,
-                      reason: "Execution mode auto-selection"
-                    }, "system");
+                      logEvent("SYSTEM_AUTOFILL", {
+                        semester: selectedSemester,
+                        examPeriod: period,
+                        selectedCourses: autoSelected,
+                        reason: `${mode} mode auto-selection`
+                      }, "system");
+                    } else {
+                      setExamPeriod("");
+                      setSelectedCourses([]);
+                    }
                   } else {
                     setExamPeriod("");
                     setSelectedCourses([]);
                   }
+                  
+                  // Reset confirmed and showErrors states at the end of any change
                   setConfirmed(false);
                   setShowErrors(false);
                 }}
-                className="w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                disabled={mode === "Assistance" && semester !== "" && !isEditable}
+                className={`w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${(mode === "Assistance" && semester !== "" && !isEditable) ? "bg-gray-50 cursor-not-allowed opacity-75" : "bg-white"}`}
               >
                 <option value="">Select Semester</option>
                 <option value="WiSe 2025">WiSe 2025</option>
@@ -355,8 +369,8 @@ export default function Home() {
                       setExamPeriod(val);
                       logEvent("CHANGE_EXAM_PERIOD", { value: val });
                     }}
-                    disabled={mode === "Execution"}
-                    className={`w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${mode === "Execution" ? "bg-gray-50 cursor-not-allowed opacity-75" : "bg-white"}`}
+                    disabled={mode === "Execution" || (mode === "Assistance" && !isEditable)}
+                    className={`w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? "bg-gray-50 cursor-not-allowed opacity-75" : "bg-white"}`}
                   >
                     <option value="">Select Period</option>
                     {semester === "WiSe 2025" ? (
@@ -387,15 +401,15 @@ export default function Home() {
                     mode === "Assistance" && animateError ? "animate-shake" : ""
                   }`}>
                     {currentCourses.map((course) => (
-                      <label key={course} className={`flex items-center p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
+                      <label key={course} className={`flex items-center p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
                         <input
                           type="checkbox"
                           checked={selectedCourses.includes(course)}
                           onChange={() => handleCourseToggle(course)}
-                          disabled={mode === "Execution" || ((mode !== "Information" && mode !== "Assistance") && !selectedCourses.includes(course) && selectedCourses.length >= 2)}
-                          className={`w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${mode === "Execution" && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50"}`}
+                          disabled={mode === "Execution" || (mode === "Assistance" && !isEditable)}
+                          className={`w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${ (mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50"}`}
                         />
-                        <span className={`ml-3 text-sm ${mode === "Execution" && selectedCourses.includes(course) ? "text-blue-700 font-medium" : "text-gray-700"}`}>{course}</span>
+                        <span className={`ml-3 text-sm ${(mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "text-blue-700 font-medium" : "text-gray-700"}`}>{course}</span>
                       </label>
                     ))}
                   </div>
@@ -425,7 +439,8 @@ export default function Home() {
                     setConfirmed(val);
                     logEvent("CONFIRM_CHECKBOX", { confirmed: val });
                   }}
-                  className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  disabled={mode === "Assistance" && !semester}
+                  className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${(mode === "Assistance" && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                 />
                 <span className="ml-3 text-xs text-gray-600 leading-normal">
                   I confirm that I have reviewed my selection and understand the constraints and outcome.
@@ -440,10 +455,10 @@ export default function Home() {
                 disabled={
                   !confirmed || 
                   !examPeriod || 
-                  (mode === "Execution" && !isExactlyTwo) ||
+                  ((mode === "Execution" || mode === "Assistance") && !isExactlyTwo) ||
                   (selectedCourses.length === 0)
                 }
-                className={`${mode === "Execution" ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
+                className={`${(mode === "Execution" || mode === "Assistance") ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
               >
                 Submit
               </button>
@@ -456,10 +471,23 @@ export default function Home() {
                     setExamPeriod("");
                     setSelectedCourses([]);
                     setConfirmed(false);
+                    setIsEditable(false);
                   }}
                   className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-sm hover:bg-indigo-200 transition-all"
                 >
                   Undo
+                </button>
+              )}
+              {mode === "Assistance" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    logEvent("EDIT_CLICK");
+                    setIsEditable(true);
+                  }}
+                  className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-sm hover:bg-indigo-200 transition-all"
+                >
+                  Edit
                 </button>
               )}
             </div>
