@@ -152,6 +152,7 @@ export default function Home() {
   };
 
   const handleSubmit = () => {
+    console.log("Submit clicked, mode:", mode);
     const isExactlyTwo = selectedCourses.length === 2;
     const hasMainCourse = selectedCourses.some(c => c.includes("(main)"));
     const isValid = isExactlyTwo && hasMainCourse;
@@ -174,13 +175,17 @@ export default function Home() {
 
     if (mode === "Assistance") {
       if (!isValid) {
+        console.log("Assistance mode error triggered");
         setShowErrors(true);
         setAnimateError(true);
         logEvent("SUBMIT_ERROR", { 
           reason: !isExactlyTwo ? "not_exactly_two" : "no_main_course",
           ...snapshot 
         }, "system");
-        setTimeout(() => setAnimateError(false), 600);
+        setTimeout(() => {
+          console.log("Resetting animation state");
+          setAnimateError(false);
+        }, 500);
         return;
       }
     }
@@ -395,10 +400,10 @@ export default function Home() {
                   </label>
                   <div className={`grid grid-cols-1 gap-2 p-2 rounded-xl transition-all duration-300 ${
                     mode === "Assistance" && showErrors 
-                      ? "border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] ring-2 ring-red-100" 
+                      ? "border border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] ring-0" 
                       : "border border-transparent"
                   } ${
-                    mode === "Assistance" && animateError ? "animate-shake" : ""
+                    mode === "Assistance" && animateError ? "animate-shake bg-red-50" : ""
                   }`}>
                     {currentCourses.map((course) => (
                       <label key={course} className={`flex items-center p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
@@ -455,7 +460,6 @@ export default function Home() {
                 disabled={
                   !confirmed || 
                   !examPeriod || 
-                  ((mode === "Execution" || mode === "Assistance") && !isExactlyTwo) ||
                   (selectedCourses.length === 0)
                 }
                 className={`${(mode === "Execution" || mode === "Assistance") ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
