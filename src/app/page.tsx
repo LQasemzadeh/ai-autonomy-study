@@ -173,9 +173,9 @@ export default function Home() {
 
     logEvent("SUBMIT_CLICK", snapshot);
 
-    if (mode === "Assistance") {
+    if (mode === "Assistance" || mode === "Information") {
       if (!isValid) {
-        console.log("Assistance mode error triggered");
+        console.log(`${mode} mode error triggered`);
         setShowErrors(true);
         setAnimateError(true);
         logEvent("SUBMIT_ERROR", { 
@@ -399,11 +399,11 @@ export default function Home() {
                     Course Selection (select exactly 2 exams):
                   </label>
                   <div className={`grid grid-cols-1 gap-2 p-2 rounded-xl transition-all duration-300 ${
-                    mode === "Assistance" && showErrors 
+                    (mode === "Assistance" || mode === "Information") && showErrors 
                       ? "border border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] ring-0" 
                       : "border border-transparent"
                   } ${
-                    mode === "Assistance" && animateError ? "animate-shake bg-red-50" : ""
+                    (mode === "Assistance" || mode === "Information") && animateError ? "animate-shake bg-red-50" : ""
                   }`}>
                     {currentCourses.map((course) => (
                       <label key={course} className={`flex items-center p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
