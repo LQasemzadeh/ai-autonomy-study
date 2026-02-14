@@ -16,6 +16,7 @@ export default function Home() {
   const [showErrors, setShowErrors] = useState(false);
   const [animateError, setAnimateError] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
+  const [showExecutionPreview, setShowExecutionPreview] = useState(false);
 
   const [sessionId] = useState(() => {
     // Generate a unique session ID for this browser tab session.
@@ -279,6 +280,79 @@ export default function Home() {
     const isExactlyTwo = selectedCourses.length === 2;
     const hasMainCourse = selectedCourses.some(course => course.toLowerCase().includes("(main)"));
     
+    if (showExecutionPreview && mode === "Execution") {
+      return (
+        <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8 flex flex-col text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">your exams:</h2>
+            <div className="space-y-3 mb-8">
+              {selectedCourses.map((course, idx) => (
+                <div key={idx} className="text-lg text-gray-800 border-b border-gray-100 pb-2">
+                  {course.replace(" (main)", "").replace(" (Skill allignment)", "").replace(" (skill alignment)", "")}
+                </div>
+              ))}
+            </div>
+
+            <div className={`mb-6 flex items-start text-left px-2 py-2 rounded-xl transition-all duration-300 ${
+              showErrors && mode === "Execution" && showExecutionPreview
+                ? "border border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] ring-0" 
+                : "border border-transparent"
+            } ${
+              animateError && mode === "Execution" && showExecutionPreview ? "animate-shake bg-red-50" : ""
+            }`}>
+              <label className="flex items-start cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(e) => {
+                    setConfirmed(e.target.checked);
+                    setShowErrors(false);
+                    logEvent("CONFIRM_CHECKBOX_PREVIEW", { confirmed: e.target.checked });
+                  }}
+                  className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                />
+                <span className="ml-3 text-sm text-gray-600 leading-tight group-hover:text-gray-900 transition-colors">
+                  I confirm that I have reviewed my selection and understand the constraints and outcome.
+                </span>
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (!confirmed) {
+                    setShowErrors(true);
+                    setAnimateError(true);
+                    logEvent("SUBMIT_ERROR_PREVIEW", { reason: "not_confirmed" }, "system");
+                    setTimeout(() => setAnimateError(false), 500);
+                    return;
+                  }
+                  setIsSubmitted(true);
+                  logEvent("SUBMIT_SUCCESS", { semester, selectedCourses, mode, source: "execution_preview" });
+                  logEvent("PAGE_VIEW", { section: "ThankYou" });
+                }}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all"
+              >
+                submit
+              </button>
+              <button
+                onClick={() => {
+                  setShowExecutionPreview(false);
+                  setSemester("");
+                  setExamPeriod("");
+                  setSelectedCourses([]);
+                  logEvent("SKIP_EXECUTION_PREVIEW");
+                }}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold text-lg hover:bg-gray-200 transition-all"
+              >
+                skip
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const showCountWarning = ((mode === "Information" || mode === "Assistance") && !isExactlyTwo && selectedCourses.length > 0) || (mode === "Assistance" && showErrors && !isExactlyTwo);
     const showMainWarning = ((mode === "Information" || mode === "Assistance") && isExactlyTwo && !hasMainCourse) || (mode === "Assistance" && showErrors && isExactlyTwo && !hasMainCourse);
 
@@ -308,7 +382,30 @@ export default function Home() {
                   setConfirmed(false);
                   setShowErrors(false);
                   
-                  if (mode === "Execution" || mode === "Assistance") {
+                  if (mode === "Execution") {
+                    if (selectedSemester) {
+                      const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
+                      setExamPeriod(period);
+                      
+                      const courses = selectedSemester === "WiSe 2025" ? [
+                        "HCI (main)",
+                        "Informationarchitechture (Skill allignment)"
+                      ] : [
+                        "Market Research (main)",
+                        "Data Analytics (skill alignment)"
+                      ];
+                      
+                      setSelectedCourses(courses);
+                      setShowExecutionPreview(true);
+
+                      logEvent("SYSTEM_AUTOFILL", {
+                        semester: selectedSemester,
+                        examPeriod: period,
+                        selectedCourses: courses,
+                        reason: `Execution mode preview triggered`
+                      }, "system");
+                    }
+                  } else if (mode === "Assistance") {
                     if (selectedSemester) {
                       // Auto-select 1st Opp
                       const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
@@ -434,52 +531,40 @@ export default function Home() {
               </>
             )}
 
-            <div className="pt-2">
-              <label className="flex items-start cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(e) => {
-                    const val = e.target.checked;
-                    setConfirmed(val);
-                    logEvent("CONFIRM_CHECKBOX", { confirmed: val });
-                  }}
-                  disabled={mode === "Assistance" && !semester}
-                  className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${(mode === "Assistance" && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                />
-                <span className="ml-3 text-xs text-gray-600 leading-normal">
-                  I confirm that I have reviewed my selection and understand the constraints and outcome.
-                </span>
-              </label>
-            </div>
+            {mode !== "Execution" && (
+              <div className="pt-2">
+                <label className="flex items-start cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      setConfirmed(val);
+                      logEvent("CONFIRM_CHECKBOX", { confirmed: val });
+                    }}
+                    disabled={mode === "Assistance" && !semester}
+                    className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${(mode === "Assistance" && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  />
+                  <span className="ml-3 text-xs text-gray-600 leading-normal">
+                    I confirm that I have reviewed my selection and understand the constraints and outcome.
+                  </span>
+                </label>
+              </div>
+            )}
 
             <div className="flex gap-2 mt-4">
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={
-                  !confirmed || 
-                  !examPeriod || 
-                  (selectedCourses.length === 0)
-                }
-                className={`${(mode === "Execution" || mode === "Assistance") ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
-              >
-                Submit
-              </button>
-              {mode === "Execution" && (
+              {mode !== "Execution" && (
                 <button
                   type="button"
-                  onClick={() => {
-                    logEvent("UNDO_CLICK");
-                    setSemester("");
-                    setExamPeriod("");
-                    setSelectedCourses([]);
-                    setConfirmed(false);
-                    setIsEditable(false);
-                  }}
-                  className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-sm hover:bg-indigo-200 transition-all"
+                  onClick={handleSubmit}
+                  disabled={
+                    !confirmed || 
+                    !examPeriod || 
+                    (selectedCourses.length === 0)
+                  }
+                  className={`${mode === "Assistance" ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
                 >
-                  Undo
+                  Submit
                 </button>
               )}
               {mode === "Assistance" && (
