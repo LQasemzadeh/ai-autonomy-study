@@ -228,12 +228,13 @@ export default function Home() {
     const hasConflict = checkConflict();
     const isExactlyTwo = selectedCourses.length === 2;
     const hasMainCourse = selectedCourses.some(c => c.toLowerCase().includes("(main)"));
-    const isValid = isExactlyTwo && hasMainCourse && !hasConflict;
+    const isValid = isExactlyTwo && hasMainCourse && !hasConflict && examPeriod;
     
     const errors = [];
     if (!isExactlyTwo) errors.push("NEED_EXACTLY_2");
     if (!hasMainCourse) errors.push("NEED_MAIN_COURSE");
     if (hasConflict) errors.push("TIME_CONFLICT");
+    if (!examPeriod) errors.push("MISSING_PERIOD");
 
     const snapshot = {
       semester,
@@ -252,7 +253,8 @@ export default function Home() {
         setShowErrors(true);
         setAnimateError(true);
         let reason = "";
-        if (!isExactlyTwo) reason = "not_exactly_two";
+        if (!examPeriod) reason = "missing_period";
+        else if (!isExactlyTwo) reason = "not_exactly_two";
         else if (!hasMainCourse) reason = "no_main_course";
         else if (hasConflict) reason = "time_conflict";
 

@@ -146,6 +146,8 @@ const MainForm = ({
 
   const hasConflict = checkConflict();
   const showConflictWarning = ((mode === "Information" || mode === "Assistance") && hasConflict) || (showErrors && hasConflict);
+  const showPeriodError = (mode === "Information" || mode === "Assistance") && showErrors && !examPeriod;
+  const showCourseError = (mode === "Information" || mode === "Assistance") && showErrors && (!isExactlyTwo || !hasMainCourse || hasConflict);
 
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
@@ -274,45 +276,108 @@ const MainForm = ({
 
           {semester && (
             <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Exam Period</label>
-                <select 
-                  value={examPeriod}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setExamPeriod(val);
-                    logEvent("CHANGE_EXAM_PERIOD", { value: val });
-                  }}
-                  disabled={mode === "Execution" || (mode === "Assistance" && !isEditable)}
-                  className={`w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? "bg-gray-50 cursor-not-allowed opacity-75" : "bg-white"}`}
-                >
-                  <option value="">Select Period</option>
-                  {semester === "WiSe 2025" ? (
-                    <>
-                      <option value="1st Opp Jan-Feb">1st Opp Jan-Feb</option>
-                      <option value="2nd Retake Apr-May">2nd Retake Apr-May</option>
-                      <option value="3rd Retake Sep">3rd Retake Sep</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="1st Opp Jun-Jul">1st Opp Jun-Jul</option>
-                      <option value="2nd Retake Nov">2nd Retake Nov</option>
-                      <option value="3rd Retake Mar">3rd Retake Mar</option>
-                    </>
-                  )}
-                </select>
-              </div>
+          <div className={`${showPeriodError && animateError ? "animate-shake" : ""}`}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Exam Period</label>
+            <select 
+              value={examPeriod}
+              onChange={(e) => {
+                const val = e.target.value;
+                setExamPeriod(val);
+                logEvent("CHANGE_EXAM_PERIOD", { value: val });
+
+                if (mode === "Assistance" && val) {
+                  const courses = semester === "WiSe 2025" ? wise2025Courses : sose2026Courses;
+                  let validPairs: string[][] = [];
+                  const allCourses = [...courses];
+
+                  const toMin = (t: string) => {
+                    const [h, m] = t.trim().split(":").map(Number);
+                    return h * 60 + m;
+                  };
+
+                  const hasConflict = (c1: string, c2: string) => {
+                    const dt1 = getExamDateTime(c1, semester, val);
+                    const dt2 = getExamDateTime(c2, semester, val);
+                    if (!dt1 || !dt2) return false;
+                    const [date1, time1] = dt1.split(", ");
+                    const [date2, time2] = dt2.split(", ");
+                    if (date1 !== date2) return false;
+                    const [start1, end1] = time1.replace('–', '-').split("-");
+                    const [start2, end2] = time2.replace('–', '-').split("-");
+                    const s1 = toMin(start1), e1 = toMin(end1);
+                    const s2 = toMin(start2), e2 = toMin(end2);
+                    return s1 < e2 && s2 < e1;
+                  };
+
+                  for (let i = 0; i < allCourses.length; i++) {
+                    for (let j = i + 1; j < allCourses.length; j++) {
+                      const c1 = allCourses[i];
+                      const c2 = allCourses[j];
+                      const hasMain = c1.toLowerCase().includes("(main)") || c2.toLowerCase().includes("(main)");
+                      if (hasMain && !hasConflict(c1, c2)) {
+                        validPairs.push([c1, c2]);
+                      }
+                    }
+                  }
+
+                  let autoSelected: string[] = [];
+                  if (validPairs.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * validPairs.length);
+                    autoSelected = validPairs[randomIndex];
+                  }
+
+                  setSelectedCourses(autoSelected);
+                  setConfirmed(false);
+                  setShowErrors(false);
+
+                  logEvent("SYSTEM_AUTOFILL", {
+                    semester,
+                    examPeriod: val,
+                    selectedCourses: autoSelected,
+                    reason: `${mode} mode auto-selection on period change`
+                  }, "system");
+                }
+              }}
+              disabled={mode === "Execution" || (mode === "Assistance" && !isEditable)}
+              className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${
+                showPeriodError
+                  ? "border-red-400 bg-red-50 shadow-[0_0_8px_rgba(239,68,68,0.15)]"
+                  : "border-gray-300 bg-white"
+              } ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? "bg-gray-50 cursor-not-allowed opacity-75" : ""}`}
+            >
+              <option value="">Select Period</option>
+              {semester === "WiSe 2025" ? (
+                <>
+                  <option value="1st Opp Jan-Feb">1st Opp Jan-Feb</option>
+                  <option value="2nd Retake Apr-May">2nd Retake Apr-May</option>
+                  <option value="3rd Retake Sep">3rd Retake Sep</option>
+                </>
+              ) : (
+                <>
+                  <option value="1st Opp Jun-Jul">1st Opp Jun-Jul</option>
+                  <option value="2nd Retake Nov">2nd Retake Nov</option>
+                  <option value="3rd Retake Mar">3rd Retake Mar</option>
+                </>
+              )}
+            </select>
+            {showPeriodError && (
+              <p className="text-red-600 text-xs mt-1 ml-1">
+                <span className="font-bold">ERROR: </span>
+                Please select an exam period.
+              </p>
+            )}
+          </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Course Selection (select exactly 2 exams):
                 </label>
                 <div className={`grid grid-cols-1 gap-2 p-2 rounded-xl transition-all duration-300 ${
-                  (mode === "Assistance" || mode === "Information") && showErrors
+                  showCourseError
                     ? "border border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] ring-0" 
                     : "border border-transparent"
                 } ${
-                  (mode === "Assistance" || mode === "Information") && animateError ? "animate-shake bg-red-50" : ""
+                  showCourseError && animateError ? "animate-shake bg-red-50" : ""
                 }`}>
                   {currentCourses.map((course) => (
                     <label key={course} className={`flex items-start p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
@@ -384,7 +449,7 @@ const MainForm = ({
                 onClick={handleSubmit}
                 disabled={
                   !confirmed || 
-                  !examPeriod || 
+                  ((mode !== "Assistance" && mode !== "Information") && !examPeriod) || 
                   (selectedCourses.length === 0)
                 }
                 className={`${mode === "Assistance" ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}
