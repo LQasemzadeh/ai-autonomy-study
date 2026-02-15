@@ -150,7 +150,7 @@ export default function Home() {
 
   const handleSubmit = () => {
     const isExactlyTwo = selectedCourses.length === 2;
-    const hasMainCourse = selectedCourses.some(c => c.includes("(main)"));
+    const hasMainCourse = selectedCourses.some(c => c.toLowerCase().includes("(main)"));
     const isValid = isExactlyTwo && hasMainCourse;
     
     const errors = [];
@@ -207,6 +207,9 @@ export default function Home() {
       }
     }
   };
+
+  const isExactlyTwo = selectedCourses.length === 2;
+  const hasMainCourse = selectedCourses.some(c => c.toLowerCase().includes("(main)"));
 
   if (hasConsented === false) {
     return <DeclineView />;

@@ -47,8 +47,8 @@ const MainForm = ({
 }: MainFormProps) => {
   const wise2025Courses = [
     "HCI (main)",
-    "Digital Bussiness Models (main)",
-    "Informationarchitechture (Skill allignment)",
+    "Digital Business Models (main)",
+    "Information Architecture (Skill alignment)",
     "The User in Society (skill alignment)"
   ];
   const sose2026Courses = [
@@ -61,6 +61,52 @@ const MainForm = ({
   const currentCourses = semester === "WiSe 2025" ? wise2025Courses : sose2026Courses;
   const isExactlyTwo = selectedCourses.length === 2;
   const hasMainCourse = selectedCourses.some(course => course.toLowerCase().includes("(main)"));
+
+  const getExamDateTime = (course: string, semester: string, period: string) => {
+    const schedule: { [key: string]: { [key: string]: { [key: string]: string } } } = {
+      "WiSe 2025": {
+        "1st Opp Jan-Feb": {
+          "HCI (main)": "10 Feb 2026, 09:00–10:30",
+          "Digital Business Models (main)": "10 Feb 2026, 12:15–13:45",
+          "Information Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
+          "The User in Society (skill alignment)": "11 Feb 2026, 09:00–10:30"
+        },
+        "2nd Retake Apr-May": {
+          "HCI (main)": "12 May 2026, 09:00–10:30",
+          "Digital Business Models (main)": "12 May 2026, 11:15–12:45",
+          "Information Architecture (Skill alignment)": "13 May 2026, 09:00–10:30",
+          "The User in Society (skill alignment)": "13 May 2026, 11:15–12:45"
+        },
+        "3rd Retake Sep": {
+          "HCI (main)": "15 Sep 2026, 09:00–10:30",
+          "Digital Business Models (main)": "15 Sep 2026, 11:15–12:45",
+          "Information Architecture (Skill alignment)": "16 Sep 2026, 09:00–10:30",
+          "The User in Society (skill alignment)": "16 Sep 2026, 11:15–12:45"
+        }
+      },
+      "SoSe 2026": {
+        "1st Opp Jun-Jul": {
+          "Market Research (main)": "20 Jul 2026, 09:00–10:30",
+          "Data Analytics (skill alignment)": "20 Jul 2026, 10:15–11:45",
+          "Ethics (main)": "20 Jul 2026, 12:15–13:45",
+          "User Behaviour Control (skill alignment)": "21 Jul 2026, 09:00–10:30"
+        },
+        "2nd Retake Nov": {
+          "Market Research (main)": "16 Nov 2026, 09:00–10:30",
+          "Data Analytics (skill alignment)": "17 Nov 2026, 09:00–10:30",
+          "Ethics (main)": "16 Nov 2026, 11:15–12:45",
+          "User Behaviour Control (skill alignment)": "17 Nov 2026, 11:15–12:45"
+        },
+        "3rd Retake Mar": {
+          "Market Research (main)": "10 Mar 2027, 09:00–10:30",
+          "Data Analytics (skill alignment)": "11 Mar 2027, 09:00–10:30",
+          "Ethics (main)": "10 Mar 2027, 11:15–12:45",
+          "User Behaviour Control (skill alignment)": "11 Mar 2027, 11:15–12:45"
+        }
+      }
+    };
+    return schedule[semester]?.[period]?.[course] || "";
+  };
   
   const showCountWarning = ((mode === "Information" || mode === "Assistance") && !isExactlyTwo && selectedCourses.length > 0) || (showErrors && !isExactlyTwo);
   const showMainWarning = ((mode === "Information" || mode === "Assistance") && isExactlyTwo && !hasMainCourse) || (showErrors && isExactlyTwo && !hasMainCourse);
@@ -97,7 +143,7 @@ const MainForm = ({
                     
                     const courses = selectedSemester === "WiSe 2025" ? [
                       "HCI (main)",
-                      "Informationarchitechture (Skill allignment)"
+                      "Information Architecture (Skill alignment)"
                     ] : [
                       "Market Research (main)",
                       "Data Analytics (skill alignment)"
@@ -120,8 +166,8 @@ const MainForm = ({
                     
                     const courses = selectedSemester === "WiSe 2025" ? [
                       "HCI (main)",
-                      "Digital Bussiness Models (main)",
-                      "Informationarchitechture (Skill allignment)",
+                      "Digital Business Models (main)",
+                      "Information Architecture (Skill alignment)",
                       "The User in Society (skill alignment)"
                     ] : [
                       "Market Research (main)",
@@ -208,15 +254,22 @@ const MainForm = ({
                   (mode === "Assistance" || mode === "Information") && animateError ? "animate-shake bg-red-50" : ""
                 }`}>
                   {currentCourses.map((course) => (
-                    <label key={course} className={`flex items-center p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
+                    <label key={course} className={`flex items-start p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
                       <input
                         type="checkbox"
                         checked={selectedCourses.includes(course)}
                         onChange={() => handleCourseToggle(course)}
                         disabled={mode === "Execution" || (mode === "Assistance" && !isEditable)}
-                        className={`w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${ (mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50"}`}
+                        className={`mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${ (mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50"}`}
                       />
-                      <span className={`ml-3 text-sm ${(mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "text-blue-700 font-medium" : "text-gray-700"}`}>{course}</span>
+                      <div className="ml-3 flex flex-col">
+                        <span className={`text-sm ${(mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "text-blue-700 font-medium" : "text-gray-700"}`}>{course}</span>
+                        {semester && (
+                          <span className="text-[11px] text-gray-500 mt-0.5">
+                            {getExamDateTime(course, semester, examPeriod || (semester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul"))}
+                          </span>
+                        )}
+                      </div>
                     </label>
                   ))}
                 </div>

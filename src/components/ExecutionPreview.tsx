@@ -34,17 +34,47 @@ const ExecutionPreview = ({
   setSelectedCourses,
   semester,
   mode
-}: ExecutionPreviewProps) => (
-  <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
-    <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8 flex flex-col text-center">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">your exams:</h2>
-      <div className="space-y-3 mb-8">
-        {selectedCourses.map((course: string, idx: number) => (
-          <div key={idx} className="text-lg text-gray-800 border-b border-gray-100 pb-2">
-            {course.replace(" (main)", "").replace(" (Skill allignment)", "").replace(" (skill alignment)", "")}
-          </div>
-        ))}
-      </div>
+}: ExecutionPreviewProps) => {
+  const getExamDateTime = (course: string, semester: string) => {
+    // In Execution mode, it's always the 1st opportunity
+    const period = semester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
+    const schedule: { [key: string]: { [key: string]: { [key: string]: string } } } = {
+      "WiSe 2025": {
+        "1st Opp Jan-Feb": {
+          "HCI (main)": "10 Feb 2026, 09:00–10:30",
+          "Digital Business Models (main)": "10 Feb 2026, 12:15–13:45",
+          "Information Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
+          "The User in Society (skill alignment)": "11 Feb 2026, 09:00–10:30"
+        }
+      },
+      "SoSe 2026": {
+        "1st Opp Jun-Jul": {
+          "Market Research (main)": "20 Jul 2026, 09:00–10:30",
+          "Data Analytics (skill alignment)": "20 Jul 2026, 10:15–11:45",
+          "Ethics (main)": "20 Jul 2026, 12:15–13:45",
+          "User Behaviour Control (skill alignment)": "21 Jul 2026, 09:00–10:30"
+        }
+      }
+    };
+    return schedule[semester]?.[period]?.[course] || "";
+  };
+
+  return (
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8 flex flex-col text-center">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">your exams:</h2>
+        <div className="space-y-4 mb-8">
+          {selectedCourses.map((course: string, idx: number) => (
+            <div key={idx} className="flex flex-col items-center border-b border-gray-100 pb-3 last:border-0">
+              <span className="text-lg text-gray-800">
+                {course.replace(" (main)", "").replace(" (Skill alignment)", "").replace(" (skill alignment)", "").replace(" (Skill allignment)", "")}
+              </span>
+              <span className="text-sm text-gray-500 mt-1">
+                {getExamDateTime(course, semester)}
+              </span>
+            </div>
+          ))}
+        </div>
 
       <div className={`mb-6 flex items-start text-left px-2 py-2 rounded-xl transition-all duration-300 ${
         showErrors
@@ -70,39 +100,40 @@ const ExecutionPreview = ({
         </label>
       </div>
 
-      <div className="flex gap-3">
-        <button
-          onClick={() => {
-            if (!confirmed) {
-              setShowErrors(true);
-              setAnimateError(true);
-              logEvent("SUBMIT_ERROR_PREVIEW", { reason: "not_confirmed" }, "system");
-              setTimeout(() => setAnimateError(false), 500);
-              return;
-            }
-            setIsSubmitted(true);
-            logEvent("SUBMIT_SUCCESS", { semester, selectedCourses, mode, source: "execution_preview" });
-            logEvent("PAGE_VIEW", { section: "ThankYou" });
-          }}
-          className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all"
-        >
-          submit
-        </button>
-        <button
-          onClick={() => {
-            setShowExecutionPreview(false);
-            setSemester("");
-            setExamPeriod("");
-            setSelectedCourses([]);
-            logEvent("SKIP_EXECUTION_PREVIEW");
-          }}
-          className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold text-lg hover:bg-gray-200 transition-all"
-        >
-          skip
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              if (!confirmed) {
+                setShowErrors(true);
+                setAnimateError(true);
+                logEvent("SUBMIT_ERROR_PREVIEW", { reason: "not_confirmed" }, "system");
+                setTimeout(() => setAnimateError(false), 500);
+                return;
+              }
+              setIsSubmitted(true);
+              logEvent("SUBMIT_SUCCESS", { semester, selectedCourses, mode, source: "execution_preview" });
+              logEvent("PAGE_VIEW", { section: "ThankYou" });
+            }}
+            className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all"
+          >
+            submit
+          </button>
+          <button
+            onClick={() => {
+              setShowExecutionPreview(false);
+              setSemester("");
+              setExamPeriod("");
+              setSelectedCourses([]);
+              logEvent("SKIP_EXECUTION_PREVIEW");
+            }}
+            className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold text-lg hover:bg-gray-200 transition-all"
+          >
+            skip
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default ExecutionPreview;
