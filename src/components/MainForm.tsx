@@ -18,32 +18,34 @@ interface MainFormProps {
   isEditable: boolean;
   setIsEditable: (val: boolean) => void;
   setShowExecutionPreview: (val: boolean) => void;
-  logEvent: (action: string, details?: any, actor?: "user" | "system") => void;
-  handleSubmit: () => void;
-  handleCourseToggle: (course: string) => void;
+    logEvent: (action: string, details?: any, actor?: "user" | "system") => void;
+    handleSubmit: () => void;
+    handleCourseToggle: (course: string) => void;
+    submitAttempts: number;
 }
 
 const MainForm = ({
-  participantId,
-  mode,
-  semester,
-  setSemester,
-  examPeriod,
-  setExamPeriod,
-  selectedCourses,
-  setSelectedCourses,
-  confirmed,
-  setConfirmed,
-  showErrors,
-  setShowErrors,
-  animateError,
-  setAnimateError,
-  isEditable,
-  setIsEditable,
-  setShowExecutionPreview,
-  logEvent,
-  handleSubmit,
-  handleCourseToggle
+    participantId,
+    mode,
+    semester,
+    setSemester,
+    examPeriod,
+    setExamPeriod,
+    selectedCourses,
+    setSelectedCourses,
+    confirmed,
+    setConfirmed,
+    showErrors,
+    setShowErrors,
+    animateError,
+    setAnimateError,
+    isEditable,
+    setIsEditable,
+    setShowExecutionPreview,
+    logEvent,
+    handleSubmit,
+    handleCourseToggle,
+    submitAttempts
 }: MainFormProps) => {
   const wise2025Courses = [
     "HCI (main)",
@@ -174,30 +176,7 @@ const MainForm = ({
                 setConfirmed(false);
                 setShowErrors(false);
                 
-                if (mode === "Execution") {
-                  if (selectedSemester) {
-                    const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
-                    setExamPeriod(period);
-                    
-                    const courses = selectedSemester === "WiSe 2025" ? [
-                      "HCI (main)",
-                      "Information Architecture (Skill alignment)"
-                    ] : [
-                      "Market Research (main)",
-                      "Data Analytics (skill alignment)"
-                    ];
-                    
-                    setSelectedCourses(courses);
-                    setShowExecutionPreview(true);
-
-                    logEvent("SYSTEM_AUTOFILL", {
-                      semester: selectedSemester,
-                      examPeriod: period,
-                      selectedCourses: courses,
-                      reason: `Execution mode preview triggered`
-                    }, "system");
-                  }
-                } else if (mode === "Assistance") {
+                if (mode === "Execution" || mode === "Assistance") {
                   if (selectedSemester) {
                     const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
                     setExamPeriod(period);
@@ -206,7 +185,6 @@ const MainForm = ({
                     
                     // Logic to find all valid pairs: 1 must be main, no time conflict
                     let validPairs: string[][] = [];
-                    const mainCourses = courses.filter(c => c.toLowerCase().includes("(main)"));
                     const allCourses = [...courses];
 
                     const toMin = (t: string) => {
@@ -246,6 +224,10 @@ const MainForm = ({
                     }
 
                     setSelectedCourses(autoSelected);
+
+                    if (mode === "Execution") {
+                      setShowExecutionPreview(true);
+                    }
 
                     logEvent("SYSTEM_AUTOFILL", {
                       semester: selectedSemester,

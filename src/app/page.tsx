@@ -22,6 +22,7 @@ export default function Home() {
   const [animateError, setAnimateError] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
   const [showExecutionPreview, setShowExecutionPreview] = useState(false);
+  const [submitAttempts, setSubmitAttempts] = useState(0);
 
   const [sessionId] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -242,14 +243,17 @@ export default function Home() {
       selectedCourses,
       confirmChecked: confirmed,
       isValid,
+      hasConflict,
       errors,
-      mode
+      mode,
+      submitAttempts: submitAttempts + 1
     };
 
     logEvent("SUBMIT_CLICK", snapshot);
 
     if (mode === "Assistance" || mode === "Information") {
       if (!isValid) {
+        setSubmitAttempts(prev => prev + 1);
         setShowErrors(true);
         setAnimateError(true);
         let reason = "";
@@ -323,6 +327,8 @@ export default function Home() {
           setSelectedCourses={setSelectedCourses}
           semester={semester}
           mode={mode}
+          submitAttempts={submitAttempts}
+          setSubmitAttempts={setSubmitAttempts}
         />
       );
     }
@@ -349,6 +355,7 @@ export default function Home() {
         logEvent={logEvent}
         handleSubmit={handleSubmit}
         handleCourseToggle={handleCourseToggle}
+        submitAttempts={submitAttempts}
       />
     );
   }

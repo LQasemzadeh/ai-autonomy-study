@@ -16,6 +16,8 @@ interface ExecutionPreviewProps {
   setSelectedCourses: (val: string[]) => void;
   semester: string;
   mode: string;
+  submitAttempts: number;
+  setSubmitAttempts: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const ExecutionPreview = ({
@@ -33,7 +35,9 @@ const ExecutionPreview = ({
   setExamPeriod,
   setSelectedCourses,
   semester,
-  mode
+  mode,
+  submitAttempts,
+  setSubmitAttempts
 }: ExecutionPreviewProps) => {
   const getExamDateTime = (course: string, semester: string) => {
     // In Execution mode, it's always the 1st opportunity
@@ -103,15 +107,26 @@ const ExecutionPreview = ({
         <div className="flex gap-3">
           <button
             onClick={() => {
+              const currentSnapshot = {
+                semester,
+                selectedCourses,
+                mode,
+                confirmChecked: confirmed,
+                submitAttempts: submitAttempts + 1,
+                hasConflict: false // Usually auto-selected without conflict in Execution
+              };
+              logEvent("SUBMIT_CLICK", currentSnapshot);
+
               if (!confirmed) {
+                setSubmitAttempts(prev => prev + 1);
                 setShowErrors(true);
                 setAnimateError(true);
-                logEvent("SUBMIT_ERROR_PREVIEW", { reason: "not_confirmed" }, "system");
+                logEvent("SUBMIT_ERROR_PREVIEW", { reason: "not_confirmed", ...currentSnapshot }, "system");
                 setTimeout(() => setAnimateError(false), 500);
                 return;
               }
               setIsSubmitted(true);
-              logEvent("SUBMIT_SUCCESS", { semester, selectedCourses, mode, source: "execution_preview" });
+              logEvent("SUBMIT_SUCCESS", { source: "execution_preview", ...currentSnapshot });
               logEvent("PAGE_VIEW", { section: "ThankYou" });
             }}
             className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all"
@@ -124,6 +139,8 @@ const ExecutionPreview = ({
               setSemester("");
               setExamPeriod("");
               setSelectedCourses([]);
+              setConfirmed(false);
+              setShowErrors(false);
               logEvent("SKIP_EXECUTION_PREVIEW");
             }}
             className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold text-lg hover:bg-gray-200 transition-all"
