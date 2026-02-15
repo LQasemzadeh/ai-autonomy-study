@@ -149,13 +149,91 @@ export default function Home() {
   };
 
   const handleSubmit = () => {
+    const getExamDateTime = (course: string, semester: string, period: string) => {
+      const schedule: { [key: string]: { [key: string]: { [key: string]: string } } } = {
+        "WiSe 2025": {
+          "1st Opp Jan-Feb": {
+            "HCI (main)": "10 Feb 2026, 09:00–10:30",
+            "Digital Business Models (main)": "10 Feb 2026, 11:30–13:00",
+            "Information Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
+            "The User in Society (skill alignment)": "11 Feb 2026, 09:00–10:30"
+          },
+          "2nd Retake Apr-May": {
+            "HCI (main)": "12 May 2026, 09:00–10:30",
+            "Digital Business Models (main)": "12 May 2026, 11:30–13:00",
+            "Information Architecture (Skill alignment)": "12 May 2026, 10:15–11:45",
+            "The User in Society (skill alignment)": "13 May 2026, 11:15–12:45"
+          },
+          "3rd Retake Sep": {
+            "HCI (main)": "15 Sep 2026, 09:00–10:30",
+            "Digital Business Models (main)": "15 Sep 2026, 11:30–13:00",
+            "Information Architecture (Skill alignment)": "15 Sep 2026, 10:15–11:45",
+            "The User in Society (skill alignment)": "16 Sep 2026, 11:15–12:45"
+          }
+        },
+        "SoSe 2026": {
+          "1st Opp Jun-Jul": {
+            "Market Research (main)": "20 Jul 2026, 09:00–10:30",
+            "Data Analytics (skill alignment)": "20 Jul 2026, 10:15–11:45",
+            "Ethics (main)": "20 Jul 2026, 11:30–13:00",
+            "User Behaviour Control (skill alignment)": "21 Jul 2026, 09:00–10:30"
+          },
+          "2nd Retake Nov": {
+            "Market Research (main)": "16 Nov 2026, 09:00–10:30",
+            "Data Analytics (skill alignment)": "16 Nov 2026, 10:15–11:45",
+            "Ethics (main)": "16 Nov 2026, 11:30–13:00",
+            "User Behaviour Control (skill alignment)": "17 Nov 2026, 11:15–12:45"
+          },
+          "3rd Retake Mar": {
+            "Market Research (main)": "10 Mar 2027, 09:00–10:30",
+            "Data Analytics (skill alignment)": "10 Mar 2027, 10:15–11:45",
+            "Ethics (main)": "10 Mar 2027, 11:30–13:00",
+            "User Behaviour Control (skill alignment)": "11 Mar 2027, 11:15–12:45"
+          }
+        }
+      };
+      return schedule[semester]?.[period]?.[course] || "";
+    };
+
+    const checkConflict = () => {
+      if (selectedCourses.length < 2) return false;
+      
+      const p = examPeriod || (semester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul");
+      const dt1 = getExamDateTime(selectedCourses[0], semester, p);
+      const dt2 = getExamDateTime(selectedCourses[1], semester, p);
+
+      if (!dt1 || !dt2) return false;
+
+      const [date1, time1] = dt1.split(", ");
+      const [date2, time2] = dt2.split(", ");
+
+      if (date1 !== date2) return false;
+
+      const [start1, end1] = time1.replace('–', '-').split("-");
+      const [start2, end2] = time2.replace('–', '-').split("-");
+
+      const toMin = (t: string) => {
+        const [h, m] = t.trim().split(":").map(Number);
+        return h * 60 + m;
+      };
+
+      const s1 = toMin(start1);
+      const e1 = toMin(end1);
+      const s2 = toMin(start2);
+      const e2 = toMin(end2);
+
+      return s1 < e2 && s2 < e1;
+    };
+
+    const hasConflict = checkConflict();
     const isExactlyTwo = selectedCourses.length === 2;
     const hasMainCourse = selectedCourses.some(c => c.toLowerCase().includes("(main)"));
-    const isValid = isExactlyTwo && hasMainCourse;
+    const isValid = isExactlyTwo && hasMainCourse && !hasConflict;
     
     const errors = [];
     if (!isExactlyTwo) errors.push("NEED_EXACTLY_2");
     if (!hasMainCourse) errors.push("NEED_MAIN_COURSE");
+    if (hasConflict) errors.push("TIME_CONFLICT");
 
     const snapshot = {
       semester,
@@ -173,8 +251,13 @@ export default function Home() {
       if (!isValid) {
         setShowErrors(true);
         setAnimateError(true);
+        let reason = "";
+        if (!isExactlyTwo) reason = "not_exactly_two";
+        else if (!hasMainCourse) reason = "no_main_course";
+        else if (hasConflict) reason = "time_conflict";
+
         logEvent("SUBMIT_ERROR", { 
-          reason: !isExactlyTwo ? "not_exactly_two" : "no_main_course",
+          reason,
           ...snapshot 
         }, "system");
         setTimeout(() => {

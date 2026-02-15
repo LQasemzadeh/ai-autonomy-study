@@ -67,20 +67,20 @@ const MainForm = ({
       "WiSe 2025": {
         "1st Opp Jan-Feb": {
           "HCI (main)": "10 Feb 2026, 09:00–10:30",
-          "Digital Business Models (main)": "10 Feb 2026, 12:15–13:45",
+          "Digital Business Models (main)": "10 Feb 2026, 11:30–13:00",
           "Information Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
           "The User in Society (skill alignment)": "11 Feb 2026, 09:00–10:30"
         },
         "2nd Retake Apr-May": {
           "HCI (main)": "12 May 2026, 09:00–10:30",
-          "Digital Business Models (main)": "12 May 2026, 11:15–12:45",
-          "Information Architecture (Skill alignment)": "13 May 2026, 09:00–10:30",
+          "Digital Business Models (main)": "12 May 2026, 11:30–13:00",
+          "Information Architecture (Skill alignment)": "12 May 2026, 10:15–11:45",
           "The User in Society (skill alignment)": "13 May 2026, 11:15–12:45"
         },
         "3rd Retake Sep": {
           "HCI (main)": "15 Sep 2026, 09:00–10:30",
-          "Digital Business Models (main)": "15 Sep 2026, 11:15–12:45",
-          "Information Architecture (Skill alignment)": "16 Sep 2026, 09:00–10:30",
+          "Digital Business Models (main)": "15 Sep 2026, 11:30–13:00",
+          "Information Architecture (Skill alignment)": "15 Sep 2026, 10:15–11:45",
           "The User in Society (skill alignment)": "16 Sep 2026, 11:15–12:45"
         }
       },
@@ -88,19 +88,19 @@ const MainForm = ({
         "1st Opp Jun-Jul": {
           "Market Research (main)": "20 Jul 2026, 09:00–10:30",
           "Data Analytics (skill alignment)": "20 Jul 2026, 10:15–11:45",
-          "Ethics (main)": "20 Jul 2026, 12:15–13:45",
+          "Ethics (main)": "20 Jul 2026, 11:30–13:00",
           "User Behaviour Control (skill alignment)": "21 Jul 2026, 09:00–10:30"
         },
         "2nd Retake Nov": {
           "Market Research (main)": "16 Nov 2026, 09:00–10:30",
-          "Data Analytics (skill alignment)": "17 Nov 2026, 09:00–10:30",
-          "Ethics (main)": "16 Nov 2026, 11:15–12:45",
+          "Data Analytics (skill alignment)": "16 Nov 2026, 10:15–11:45",
+          "Ethics (main)": "16 Nov 2026, 11:30–13:00",
           "User Behaviour Control (skill alignment)": "17 Nov 2026, 11:15–12:45"
         },
         "3rd Retake Mar": {
           "Market Research (main)": "10 Mar 2027, 09:00–10:30",
-          "Data Analytics (skill alignment)": "11 Mar 2027, 09:00–10:30",
-          "Ethics (main)": "10 Mar 2027, 11:15–12:45",
+          "Data Analytics (skill alignment)": "10 Mar 2027, 10:15–11:45",
+          "Ethics (main)": "10 Mar 2027, 11:30–13:00",
           "User Behaviour Control (skill alignment)": "11 Mar 2027, 11:15–12:45"
         }
       }
@@ -110,6 +110,42 @@ const MainForm = ({
   
   const showCountWarning = ((mode === "Information" || mode === "Assistance") && !isExactlyTwo && selectedCourses.length > 0) || (showErrors && !isExactlyTwo);
   const showMainWarning = ((mode === "Information" || mode === "Assistance") && isExactlyTwo && !hasMainCourse) || (showErrors && isExactlyTwo && !hasMainCourse);
+
+  const checkConflict = () => {
+    if (selectedCourses.length < 2) return false;
+    
+    const p = examPeriod || (semester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul");
+    const dt1 = getExamDateTime(selectedCourses[0], semester, p);
+    const dt2 = getExamDateTime(selectedCourses[1], semester, p);
+
+    if (!dt1 || !dt2) return false;
+
+    // Format: "10 Feb 2026, 09:00–10:30"
+    const [date1, time1] = dt1.split(", ");
+    const [date2, time2] = dt2.split(", ");
+
+    if (date1 !== date2) return false;
+
+    // Handle both types of dashes (en-dash and hyphen)
+    const [start1, end1] = time1.replace('–', '-').split("-");
+    const [start2, end2] = time2.replace('–', '-').split("-");
+
+    const toMin = (t: string) => {
+      const [h, m] = t.trim().split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    const s1 = toMin(start1);
+    const e1 = toMin(end1);
+    const s2 = toMin(start2);
+    const e2 = toMin(end2);
+
+    // Overlap: (Start1 < End2) AND (Start2 < End1)
+    return s1 < e2 && s2 < e1;
+  };
+
+  const hasConflict = checkConflict();
+  const showConflictWarning = ((mode === "Information" || mode === "Assistance") && hasConflict) || (showErrors && hasConflict);
 
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
@@ -164,24 +200,49 @@ const MainForm = ({
                     const period = selectedSemester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul";
                     setExamPeriod(period);
                     
-                    const courses = selectedSemester === "WiSe 2025" ? [
-                      "HCI (main)",
-                      "Digital Business Models (main)",
-                      "Information Architecture (Skill alignment)",
-                      "The User in Society (skill alignment)"
-                    ] : [
-                      "Market Research (main)",
-                      "Ethics (main)",
-                      "Data Analytics (skill alignment)",
-                      "User Behaviour Control (skill alignment)"
-                    ];
+                    const courses = selectedSemester === "WiSe 2025" ? wise2025Courses : sose2026Courses;
                     
-                    const mainCourse = courses.find(c => c.toLowerCase().includes("(main)"));
-                    const skillCourse = courses.find(c => c.toLowerCase().includes("(skill alignment)") || c.toLowerCase().includes("(skill allignment)"));
-                    
-                    const autoSelected = [];
-                    if (mainCourse) autoSelected.push(mainCourse);
-                    if (skillCourse) autoSelected.push(skillCourse);
+                    // Logic to find all valid pairs: 1 must be main, no time conflict
+                    let validPairs: string[][] = [];
+                    const mainCourses = courses.filter(c => c.toLowerCase().includes("(main)"));
+                    const allCourses = [...courses];
+
+                    const toMin = (t: string) => {
+                      const [h, m] = t.trim().split(":").map(Number);
+                      return h * 60 + m;
+                    };
+
+                    const hasConflict = (c1: string, c2: string) => {
+                      const dt1 = getExamDateTime(c1, selectedSemester, period);
+                      const dt2 = getExamDateTime(c2, selectedSemester, period);
+                      if (!dt1 || !dt2) return false;
+                      const [date1, time1] = dt1.split(", ");
+                      const [date2, time2] = dt2.split(", ");
+                      if (date1 !== date2) return false;
+                      const [start1, end1] = time1.replace('–', '-').split("-");
+                      const [start2, end2] = time2.replace('–', '-').split("-");
+                      const s1 = toMin(start1), e1 = toMin(end1);
+                      const s2 = toMin(start2), e2 = toMin(end2);
+                      return s1 < e2 && s2 < e1;
+                    };
+
+                    for (let i = 0; i < allCourses.length; i++) {
+                      for (let j = i + 1; j < allCourses.length; j++) {
+                        const c1 = allCourses[i];
+                        const c2 = allCourses[j];
+                        const hasMain = c1.toLowerCase().includes("(main)") || c2.toLowerCase().includes("(main)");
+                        if (hasMain && !hasConflict(c1, c2)) {
+                          validPairs.push([c1, c2]);
+                        }
+                      }
+                    }
+
+                    let autoSelected: string[] = [];
+                    if (validPairs.length > 0) {
+                      const randomIndex = Math.floor(Math.random() * validPairs.length);
+                      autoSelected = validPairs[randomIndex];
+                    }
+
                     setSelectedCourses(autoSelected);
 
                     logEvent("SYSTEM_AUTOFILL", {
@@ -247,7 +308,7 @@ const MainForm = ({
                   Course Selection (select exactly 2 exams):
                 </label>
                 <div className={`grid grid-cols-1 gap-2 p-2 rounded-xl transition-all duration-300 ${
-                  (mode === "Assistance" || mode === "Information") && showErrors 
+                  (mode === "Assistance" || mode === "Information") && showErrors
                     ? "border border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] ring-0" 
                     : "border border-transparent"
                 } ${
@@ -283,6 +344,12 @@ const MainForm = ({
                   <p className="text-amber-700 text-xs mt-2 ml-1">
                     {showErrors && <span className="text-red-600 font-bold">ERROR: </span>}
                     At least one main exam is required.
+                  </p>
+                )}
+                {showConflictWarning && (
+                  <p className="text-red-600 text-xs mt-2 ml-1">
+                    {showErrors && <span className="font-bold">ERROR: </span>}
+                    The selected exams have a time conflict. Please choose a different combination.
                   </p>
                 )}
               </div>

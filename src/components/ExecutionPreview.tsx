@@ -42,7 +42,7 @@ const ExecutionPreview = ({
       "WiSe 2025": {
         "1st Opp Jan-Feb": {
           "HCI (main)": "10 Feb 2026, 09:00–10:30",
-          "Digital Business Models (main)": "10 Feb 2026, 12:15–13:45",
+          "Digital Business Models (main)": "10 Feb 2026, 11:30–13:00",
           "Information Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
           "The User in Society (skill alignment)": "11 Feb 2026, 09:00–10:30"
         }
@@ -51,7 +51,7 @@ const ExecutionPreview = ({
         "1st Opp Jun-Jul": {
           "Market Research (main)": "20 Jul 2026, 09:00–10:30",
           "Data Analytics (skill alignment)": "20 Jul 2026, 10:15–11:45",
-          "Ethics (main)": "20 Jul 2026, 12:15–13:45",
+          "Ethics (main)": "20 Jul 2026, 11:30–13:00",
           "User Behaviour Control (skill alignment)": "21 Jul 2026, 09:00–10:30"
         }
       }
