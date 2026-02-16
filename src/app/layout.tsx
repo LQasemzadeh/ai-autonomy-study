@@ -13,8 +13,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ai-autonomy-study",
+  title: "AI Autonomy Study",
   description: "User Autonomy in AI interaction study",
+  icons: {
+    icon: [
+      {
+        url: "/globe.svg",
+        href: "/globe.svg",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
