@@ -362,7 +362,7 @@ const MainForm = ({
                   showCourseError && animateError ? "animate-shake bg-red-50" : ""
                 }`}>
                   {currentCourses.map((course) => (
-                    <label key={course} className={`flex items-start p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : "hover:bg-gray-50 cursor-pointer"}`}>
+                    <label key={course} className={`flex items-start p-3 rounded-lg border border-gray-100 transition-colors ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed") : (mode === "Information" ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50 cursor-pointer")}`}>
                       <input
                         type="checkbox"
                         checked={selectedCourses.includes(course)}
