@@ -248,7 +248,11 @@ const MainForm = ({
                 setShowErrors(false);
               }}
               disabled={mode === "Assistance" && semester !== "" && !isEditable}
-              className={`w-full p-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${(mode === "Assistance" && semester !== "" && !isEditable) ? "bg-gray-50 cursor-not-allowed opacity-75" : "bg-white"}`}
+              className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${
+                (mode === "Assistance" && semester !== "" && !isEditable) 
+                ? "border-gray-300 bg-gray-200 cursor-not-allowed" 
+                : "border-gray-300 bg-white"
+              }`}
             >
               <option value="">Select Semester</option>
               <option value="WiSe 2025">WiSe 2025</option>
