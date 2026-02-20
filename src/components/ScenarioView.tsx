@@ -57,7 +57,6 @@ const ScenarioView = ({ onStartRegistration }: ScenarioViewProps) => (
 
       {/* Footer */}
       <footer className="mt-6 text-[11px] text-gray-500 sm:text-xs">
-        Academic Study Interaction
       </footer>
     </div>
   </div>
