@@ -6,11 +6,13 @@ import ThankYouView from "@/components/ThankYouView";
 import ExecutionPreview from "@/components/ExecutionPreview";
 import ConsentView from "@/components/ConsentView";
 import MainForm from "@/components/MainForm";
+import ScenarioView from "@/components/ScenarioView";
 
 type Mode = "Information" | "Assistance" | "Execution";
 
 export default function Home() {
   const [hasConsented, setHasConsented] = useState<boolean | null>(null);
+  const [showScenario, setShowScenario] = useState(false);
   const [participantId, setParticipantId] = useState("");
   const [mode, setMode] = useState<Mode>("Information");
   const [semester, setSemester] = useState("");
@@ -134,6 +136,13 @@ export default function Home() {
       if (cachedMode && modes.includes(cachedMode)) {
         assignedMode = cachedMode;
       } else {
+        // Pseudo-random balancing based on current timestamp or a counter
+        // For a more robust solution in a real app, this should be done on the server.
+        // Here we use the session count or a simple random with a slight bias if we had more info.
+        // But the requirement is "randomly and equally". 
+        // A simple way to improve equality across many users without a backend is using a fixed seed or 
+        // just relying on Math.random() which is statistically equal over large N.
+        // However, to make it more "equal" for a single user/session cycle if they refresh:
         const randomIndex = Math.floor(Math.random() * 3);
         assignedMode = modes[randomIndex];
         sessionStorage.setItem("assigned_mode", assignedMode);
@@ -145,7 +154,14 @@ export default function Home() {
 
   const handleConsent = () => {
     setHasConsented(true);
+    setShowScenario(true);
     logEvent("CONSENT_GIVEN");
+    logEvent("PAGE_VIEW", { section: "Scenario" });
+  };
+
+  const handleStartRegistration = () => {
+    setShowScenario(false);
+    logEvent("REGISTRATION_STARTED");
     logEvent("PAGE_VIEW", { section: "Form" });
   };
 
@@ -309,6 +325,10 @@ export default function Home() {
   }
 
   if (hasConsented === true) {
+    if (showScenario) {
+      return <ScenarioView onStartRegistration={handleStartRegistration} />;
+    }
+
     if (showExecutionPreview && mode === "Execution") {
       return (
         <ExecutionPreview
