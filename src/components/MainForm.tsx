@@ -251,7 +251,7 @@ const MainForm = ({
               className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${
                 (mode === "Assistance" && semester !== "" && !isEditable) 
                 ? "border-gray-300 bg-gray-200 cursor-not-allowed" 
-                : "border-gray-300 bg-white"
+                : (mode === "Execution" && semester !== "" ? "border-gray-300 bg-gray-100 text-gray-800" : "border-gray-300 bg-white")
               }`}
             >
               <option value="">Select Semester</option>
@@ -328,8 +328,10 @@ const MainForm = ({
               className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${
                 showPeriodError
                   ? "border-red-400 bg-red-50 shadow-[0_0_8px_rgba(239,68,68,0.15)]"
-                  : (mode === "Assistance" && !isEditable && examPeriod !== "" ? "border-gray-300 bg-gray-200" : "border-gray-300 bg-white")
-              } ${mode === "Execution" || (mode === "Assistance" && !isEditable && examPeriod === "") ? "bg-gray-50 cursor-not-allowed opacity-75" : ""} ${mode === "Assistance" && !isEditable && examPeriod !== "" ? "cursor-not-allowed" : ""}`}
+                  : (mode === "Execution" || (mode === "Assistance" && !isEditable) 
+                    ? "border-gray-300 bg-gray-100 text-gray-800" 
+                    : "border-gray-300 bg-white")
+              } ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? "cursor-not-allowed" : ""}`}
             >
               <option value="">Select Period</option>
               {semester === "WiSe 2025" ? (
@@ -370,7 +372,7 @@ const MainForm = ({
                       mode === "Assistance" && !isEditable && selectedCourses.includes(course)
                         ? "bg-gray-200 border-gray-300 cursor-not-allowed"
                         : (mode === "Execution" || (mode === "Assistance" && !isEditable)
-                          ? (selectedCourses.includes(course) ? "bg-blue-50 border-blue-200" : "opacity-75 cursor-not-allowed")
+                          ? (selectedCourses.includes(course) ? "bg-gray-200 border-gray-400" : "opacity-75 cursor-not-allowed")
                           : (mode === "Information" || (mode === "Assistance" && isEditable) ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50 cursor-pointer"))
                     }`}>
                       <input
@@ -388,10 +390,12 @@ const MainForm = ({
                         <span className={`text-sm ${
                           mode === "Assistance" && !isEditable && selectedCourses.includes(course)
                             ? "text-gray-700 font-medium"
-                            : ((mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "text-blue-700 font-medium" : "text-gray-700")
+                            : ((mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "text-gray-900 font-semibold" : "text-gray-700")
                         }`}>{course}</span>
                         {semester && (
-                          <span className="text-[11px] text-gray-500 mt-0.5">
+                          <span className={`text-[11px] mt-0.5 ${
+                            (mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "text-gray-700" : "text-gray-500"
+                          }`}>
                             {getExamDateTime(course, semester, examPeriod || (semester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul"))}
                           </span>
                         )}

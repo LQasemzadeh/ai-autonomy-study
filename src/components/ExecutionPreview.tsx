@@ -69,8 +69,8 @@ const ExecutionPreview = ({
         <h2 className="text-xl font-bold text-gray-900 mb-6">your exams:</h2>
         <div className="space-y-4 mb-8">
           {selectedCourses.map((course: string, idx: number) => (
-            <div key={idx} className="flex flex-col items-center border-b border-gray-100 pb-3 last:border-0">
-              <span className="text-lg text-gray-800">
+            <div key={idx} className="flex flex-col items-center bg-gray-100 rounded-lg p-3 border border-gray-200">
+              <span className="text-lg text-gray-800 font-medium">
                 {course.replace(" (main)", "").replace(" (Skill alignment)", "").replace(" (skill alignment)", "").replace(" (Skill allignment)", "")}
               </span>
               <span className="text-sm text-gray-500 mt-1">
