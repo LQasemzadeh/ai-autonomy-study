@@ -247,11 +247,11 @@ const MainForm = ({
                 setConfirmed(false);
                 setShowErrors(false);
               }}
-              disabled={mode === "Assistance" && semester !== "" && !isEditable}
+              disabled={(mode === "Execution" && semester !== "") || (mode === "Assistance" && semester !== "" && !isEditable)}
               className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm ${
-                (mode === "Assistance" && semester !== "" && !isEditable) 
-                ? "border-gray-300 bg-gray-200 cursor-not-allowed" 
-                : (mode === "Execution" && semester !== "" ? "border-gray-300 bg-gray-100 text-gray-800" : "border-gray-300 bg-white")
+                ((mode === "Execution" || mode === "Assistance") && semester !== "" && !isEditable) 
+                ? "border-gray-300 bg-gray-100 text-gray-800 cursor-not-allowed" 
+                : "border-gray-300 bg-white"
               }`}
             >
               <option value="">Select Semester</option>
@@ -329,7 +329,7 @@ const MainForm = ({
                 showPeriodError
                   ? "border-red-400 bg-red-50 shadow-[0_0_8px_rgba(239,68,68,0.15)]"
                   : (mode === "Execution" || (mode === "Assistance" && !isEditable) 
-                    ? "border-gray-300 bg-gray-100 text-gray-800" 
+                    ? (mode === "Execution" && examPeriod !== "" ? "border-gray-300 bg-gray-100 text-gray-800" : "border-gray-300 bg-gray-100 text-gray-800") 
                     : "border-gray-300 bg-white")
               } ${mode === "Execution" || (mode === "Assistance" && !isEditable) ? "cursor-not-allowed" : ""}`}
             >
@@ -369,11 +369,9 @@ const MainForm = ({
                 }`}>
                   {currentCourses.map((course) => (
                     <label key={course} className={`flex items-start p-3 rounded-lg border border-gray-100 transition-colors ${
-                      mode === "Assistance" && !isEditable && selectedCourses.includes(course)
-                        ? "bg-gray-200 border-gray-300 cursor-not-allowed"
-                        : (mode === "Execution" || (mode === "Assistance" && !isEditable)
-                          ? (selectedCourses.includes(course) ? "bg-gray-200 border-gray-400" : "opacity-75 cursor-not-allowed")
-                          : (mode === "Information" || (mode === "Assistance" && isEditable) ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50 cursor-pointer"))
+                      (mode === "Execution" || (mode === "Assistance" && !isEditable))
+                        ? (selectedCourses.includes(course) ? "bg-gray-100 border-gray-300" : "opacity-75 cursor-not-allowed")
+                        : (mode === "Information" || (mode === "Assistance" && isEditable) ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50 cursor-pointer")
                     }`}>
                       <input
                         type="checkbox"
@@ -381,16 +379,14 @@ const MainForm = ({
                         onChange={() => handleCourseToggle(course)}
                         disabled={mode === "Execution" || (mode === "Assistance" && !isEditable)}
                         className={`mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${ 
-                          (mode === "Assistance" && !isEditable && selectedCourses.includes(course))
-                          ? "opacity-100 accent-gray-500 !cursor-default"
-                          : ((mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50")
+                          (mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "opacity-100 accent-blue-600 !cursor-default" : "disabled:opacity-50"
                         }`}
                       />
                       <div className="ml-3 flex flex-col">
                         <span className={`text-sm ${
-                          mode === "Assistance" && !isEditable && selectedCourses.includes(course)
-                            ? "text-gray-700 font-medium"
-                            : ((mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) ? "text-gray-900 font-semibold" : "text-gray-700")
+                          (mode === "Execution" || (mode === "Assistance" && !isEditable)) && selectedCourses.includes(course) 
+                            ? (mode === "Assistance" ? "text-gray-900 font-medium" : "text-gray-900 font-semibold") 
+                            : "text-gray-700"
                         }`}>{course}</span>
                         {semester && (
                           <span className={`text-[11px] mt-0.5 ${
