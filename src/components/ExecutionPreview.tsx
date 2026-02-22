@@ -143,7 +143,7 @@ const ExecutionPreview = ({
               setShowErrors(false);
               logEvent("SKIP_EXECUTION_PREVIEW");
             }}
-            className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold text-lg hover:bg-gray-200 transition-all"
+            className="flex-1 py-2 bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-lg hover:bg-indigo-200 transition-all"
           >
             skip
           </button>
