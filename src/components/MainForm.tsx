@@ -421,7 +421,7 @@ const MainForm = ({
             </>
           )}
 
-          {mode !== "Execution" && (
+          {mode !== "Execution" && ((mode !== "Assistance" && mode !== "Information") || semester) && (
             <div className="pt-2">
               <label className="flex items-start cursor-pointer">
                 <input
@@ -432,8 +432,8 @@ const MainForm = ({
                     setConfirmed(val);
                     logEvent("CONFIRM_CHECKBOX", { confirmed: val });
                   }}
-                  disabled={mode === "Assistance" && !semester}
-                  className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${(mode === "Assistance" && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  disabled={(mode === "Assistance" || mode === "Information") && !semester}
+                  className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${((mode === "Assistance" || mode === "Information") && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                 />
                 <span className="ml-3 text-xs text-gray-600 leading-normal">
                   I confirm that I have reviewed my selection and understand the constraints and outcome.
@@ -443,7 +443,7 @@ const MainForm = ({
           )}
 
           <div className="flex gap-2 mt-4">
-            {mode !== "Execution" && (
+            {mode !== "Execution" && ((mode !== "Assistance" && mode !== "Information") || semester) && (
               <button
                 type="button"
                 onClick={handleSubmit}
@@ -457,7 +457,7 @@ const MainForm = ({
                 Submit
               </button>
             )}
-            {mode === "Assistance" && (
+            {mode === "Assistance" && semester && (
               <button
                 type="button"
                 onClick={() => {
