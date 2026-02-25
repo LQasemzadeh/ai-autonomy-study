@@ -50,7 +50,7 @@ const MainForm = ({
   const wise2025Courses = [
     "HCI (main)",
     "Digital Business Models (main)",
-    "Information Architecture (Skill alignment)",
+    "manual Architecture (Skill alignment)",
     "The User in Society (skill alignment)"
   ];
   const sose2026Courses = [
@@ -70,19 +70,19 @@ const MainForm = ({
         "1st Opp Jan-Feb": {
           "HCI (main)": "10 Feb 2026, 09:00–10:30",
           "Digital Business Models (main)": "10 Feb 2026, 11:30–13:00",
-          "Information Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
+          "manual Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
           "The User in Society (skill alignment)": "11 Feb 2026, 09:00–10:30"
         },
         "2nd Retake Apr-May": {
           "HCI (main)": "12 May 2026, 09:00–10:30",
           "Digital Business Models (main)": "12 May 2026, 11:30–13:00",
-          "Information Architecture (Skill alignment)": "12 May 2026, 10:15–11:45",
+          "manual Architecture (Skill alignment)": "12 May 2026, 10:15–11:45",
           "The User in Society (skill alignment)": "13 May 2026, 11:15–12:45"
         },
         "3rd Retake Sep": {
           "HCI (main)": "15 Sep 2026, 09:00–10:30",
           "Digital Business Models (main)": "15 Sep 2026, 11:30–13:00",
-          "Information Architecture (Skill alignment)": "15 Sep 2026, 10:15–11:45",
+          "manual Architecture (Skill alignment)": "15 Sep 2026, 10:15–11:45",
           "The User in Society (skill alignment)": "16 Sep 2026, 11:15–12:45"
         }
       },
@@ -110,8 +110,8 @@ const MainForm = ({
     return schedule[semester]?.[period]?.[course] || "";
   };
   
-  const showCountWarning = ((mode === "Information" || mode === "Assistance") && !isExactlyTwo && selectedCourses.length > 0) || (showErrors && !isExactlyTwo);
-  const showMainWarning = ((mode === "Information" || mode === "Assistance") && isExactlyTwo && !hasMainCourse) || (showErrors && isExactlyTwo && !hasMainCourse);
+  const showCountWarning = ((mode === "manual" || mode === "Assistance") && !isExactlyTwo && selectedCourses.length > 0) || (showErrors && !isExactlyTwo);
+  const showMainWarning = ((mode === "manual" || mode === "Assistance") && isExactlyTwo && !hasMainCourse) || (showErrors && isExactlyTwo && !hasMainCourse);
 
   const checkConflict = () => {
     if (selectedCourses.length < 2) return false;
@@ -147,9 +147,9 @@ const MainForm = ({
   };
 
   const hasConflict = checkConflict();
-  const showConflictWarning = ((mode === "Information" || mode === "Assistance") && hasConflict) || (showErrors && hasConflict);
-  const showPeriodError = (mode === "Information" || mode === "Assistance") && showErrors && !examPeriod;
-  const showCourseError = (mode === "Information" || mode === "Assistance") && showErrors && (!isExactlyTwo || !hasMainCourse || hasConflict);
+  const showConflictWarning = ((mode === "manual" || mode === "Assistance") && hasConflict) || (showErrors && hasConflict);
+  const showPeriodError = (mode === "manual" || mode === "Assistance") && showErrors && !examPeriod;
+  const showCourseError = (mode === "manual" || mode === "Assistance") && showErrors && (!isExactlyTwo || !hasMainCourse || hasConflict);
 
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-50 p-4 font-sans text-[#171717] overflow-hidden">
@@ -371,7 +371,7 @@ const MainForm = ({
                     <label key={course} className={`flex items-start p-3 rounded-lg border border-gray-100 transition-colors ${
                       (mode === "Execution" || (mode === "Assistance" && !isEditable))
                         ? (selectedCourses.includes(course) ? "bg-gray-100 border-gray-300" : "opacity-75 cursor-not-allowed")
-                        : (mode === "Information" || (mode === "Assistance" && isEditable) ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50 cursor-pointer")
+                        : (mode === "manual" || (mode === "Assistance" && isEditable) ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50 cursor-pointer")
                     }`}>
                       <input
                         type="checkbox"
@@ -421,7 +421,7 @@ const MainForm = ({
             </>
           )}
 
-          {mode !== "Execution" && ((mode !== "Assistance" && mode !== "Information") || semester) && (
+          {mode !== "Execution" && ((mode !== "Assistance" && mode !== "manual") || semester) && (
             <div className="pt-2">
               <label className="flex items-start cursor-pointer">
                 <input
@@ -432,8 +432,8 @@ const MainForm = ({
                     setConfirmed(val);
                     logEvent("CONFIRM_CHECKBOX", { confirmed: val });
                   }}
-                  disabled={(mode === "Assistance" || mode === "Information") && !semester}
-                  className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${((mode === "Assistance" || mode === "Information") && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  disabled={(mode === "Assistance" || mode === "manual") && !semester}
+                  className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${((mode === "Assistance" || mode === "manual") && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                 />
                 <span className="ml-3 text-xs text-gray-600 leading-normal">
                   I confirm that I have reviewed my selection and understand the constraints and outcome.
@@ -443,13 +443,13 @@ const MainForm = ({
           )}
 
           <div className="flex gap-2 mt-4">
-            {mode !== "Execution" && ((mode !== "Assistance" && mode !== "Information") || semester) && (
+            {mode !== "Execution" && ((mode !== "Assistance" && mode !== "manual") || semester) && (
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={
                   !confirmed || 
-                  ((mode !== "Assistance" && mode !== "Information") && !examPeriod) || 
+                  ((mode !== "Assistance" && mode !== "manual") && !examPeriod) || 
                   (selectedCourses.length === 0)
                 }
                 className={`${mode === "Assistance" ? "flex-[2]" : "w-full"} py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all`}

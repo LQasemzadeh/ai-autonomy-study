@@ -47,7 +47,7 @@ const ExecutionPreview = ({
         "1st Opp Jan-Feb": {
           "HCI (main)": "10 Feb 2026, 09:00–10:30",
           "Digital Business Models (main)": "10 Feb 2026, 11:30–13:00",
-          "Information Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
+          "manual Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
           "The User in Society (skill alignment)": "11 Feb 2026, 09:00–10:30"
         }
       },

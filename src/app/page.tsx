@@ -8,13 +8,13 @@ import ConsentView from "@/components/ConsentView";
 import MainForm from "@/components/MainForm";
 import ScenarioView from "@/components/ScenarioView";
 
-type Mode = "Information" | "Assistance" | "Execution";
+type Mode = "manual" | "Assistance" | "Execution";
 
 export default function Home() {
   const [hasConsented, setHasConsented] = useState<boolean | null>(null);
   const [showScenario, setShowScenario] = useState(false);
   const [participantId, setParticipantId] = useState("");
-  const [mode, setMode] = useState<Mode>("Information");
+  const [mode, setMode] = useState<Mode>("manual");
   const [semester, setSemester] = useState("");
   const [examPeriod, setExamPeriod] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
@@ -121,7 +121,7 @@ export default function Home() {
     
     logInitialEvent();
 
-    const modes: Mode[] = ["Information", "Assistance", "Execution"];
+    const modes: Mode[] = ["manual", "Assistance", "Execution"];
     
     // Check for mode in URL query params
     const urlParams = new URLSearchParams(window.location.search);
@@ -172,19 +172,19 @@ export default function Home() {
           "1st Opp Jan-Feb": {
             "HCI (main)": "10 Feb 2026, 09:00–10:30",
             "Digital Business Models (main)": "10 Feb 2026, 11:30–13:00",
-            "Information Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
+            "manual Architecture (Skill alignment)": "10 Feb 2026, 10:15–11:45",
             "The User in Society (skill alignment)": "11 Feb 2026, 09:00–10:30"
           },
           "2nd Retake Apr-May": {
             "HCI (main)": "12 May 2026, 09:00–10:30",
             "Digital Business Models (main)": "12 May 2026, 11:30–13:00",
-            "Information Architecture (Skill alignment)": "12 May 2026, 10:15–11:45",
+            "manual Architecture (Skill alignment)": "12 May 2026, 10:15–11:45",
             "The User in Society (skill alignment)": "13 May 2026, 11:15–12:45"
           },
           "3rd Retake Sep": {
             "HCI (main)": "15 Sep 2026, 09:00–10:30",
             "Digital Business Models (main)": "15 Sep 2026, 11:30–13:00",
-            "Information Architecture (Skill alignment)": "15 Sep 2026, 10:15–11:45",
+            "manual Architecture (Skill alignment)": "15 Sep 2026, 10:15–11:45",
             "The User in Society (skill alignment)": "16 Sep 2026, 11:15–12:45"
           }
         },
@@ -267,7 +267,7 @@ export default function Home() {
 
     logEvent("SUBMIT_CLICK", snapshot);
 
-    if (mode === "Assistance" || mode === "Information") {
+    if (mode === "Assistance" || mode === "manual") {
       if (!isValid) {
         setSubmitAttempts(prev => prev + 1);
         setShowErrors(true);
@@ -303,7 +303,7 @@ export default function Home() {
     if (selectedCourses.includes(course)) {
       setSelectedCourses(selectedCourses.filter(c => c !== course));
     } else {
-      if (mode === "Information" || mode === "Assistance") {
+      if (mode === "manual" || mode === "Assistance") {
         setSelectedCourses([...selectedCourses, course]);
       } else {
         if (selectedCourses.length < 2) {
