@@ -25,6 +25,9 @@ export default function Home() {
   const [isEditable, setIsEditable] = useState(false);
   const [showExecutionPreview, setShowExecutionPreview] = useState(false);
   const [submitAttempts, setSubmitAttempts] = useState(0);
+  const [totalEdits, setTotalEdits] = useState(0);
+  const [interventionCount, setInterventionCount] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
 
   const [sessionId] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -76,21 +79,37 @@ export default function Home() {
         
         const isPlaceholder = SUPABASE_KEY.includes("YOUR_ANON_PUBLIC_KEY") || SUPABASE_KEY === "";
         
+        console.log("SENDING_TO_SUPABASE:", `${SUPABASE_URL}/rest/v1/study_logs`);
+        
         if (!isPlaceholder) {
           try {
-            await fetch(`${SUPABASE_URL}/rest/v1/study_logs`, {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/study_logs`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Prefer': 'return=minimal'
               },
               body: JSON.stringify(eventData)
             });
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("Supabase error response:", response.status, errorText);
+            } else {
+              console.log("Supabase log success");
+            }
           } catch (error) {
             console.error("Failed to send log to Supabase:", error);
           }
+        } else {
+          console.warn("Supabase logging skipped: Placeholder key detected");
         }
+      });
+    } else {
+      console.warn("logEvent skipped: window undefined or _eventSeqRef missing", { 
+        isWindowUndefined: typeof window === 'undefined',
+        hasSeqRef: !!globalSeqRef 
       });
     }
   };
@@ -110,7 +129,8 @@ export default function Home() {
     if (!(window as any)._logQueue) {
       (window as any)._logQueue = Promise.resolve();
     }
-
+    
+    // Ensure logEvent is defined after global refs are set
     const logInitialEvent = async () => {
       await new Promise(resolve => setTimeout(resolve, 100));
       logEvent("PAGE_VIEW", { 
@@ -161,7 +181,8 @@ export default function Home() {
 
   const handleStartRegistration = () => {
     setShowScenario(false);
-    logEvent("REGISTRATION_STARTED");
+    setStartTime(Date.now());
+    logEvent("TASK_STARTED");
     logEvent("PAGE_VIEW", { section: "Form" });
   };
 
@@ -253,6 +274,9 @@ export default function Home() {
     if (hasConflict) errors.push("TIME_CONFLICT");
     if (!examPeriod) errors.push("MISSING_PERIOD");
 
+    const totalTimeMs = startTime ? Date.now() - startTime : 0;
+    const numConflicts = hasConflict ? 1 : 0; // Simplified for this case
+
     const snapshot = {
       semester,
       examPeriod,
@@ -263,6 +287,14 @@ export default function Home() {
       errors,
       mode,
       submitAttempts: submitAttempts + 1
+    };
+
+    const outcomeData = {
+      final_valid: isValid,
+      num_conflicts: numConflicts,
+      total_edits: totalEdits,
+      intervention_count: interventionCount,
+      total_time_ms: totalTimeMs
     };
 
     logEvent("SUBMIT_CLICK", snapshot);
@@ -278,7 +310,7 @@ export default function Home() {
         else if (!hasMainCourse) reason = "no_main_course";
         else if (hasConflict) reason = "time_conflict";
 
-        logEvent("SUBMIT_ERROR", { 
+        logEvent("ERROR_SHOWN", { 
           reason,
           ...snapshot 
         }, "system");
@@ -290,7 +322,7 @@ export default function Home() {
     }
 
     setIsSubmitted(true);
-    logEvent("SUBMIT_SUCCESS", snapshot);
+    logEvent("TASK_COMPLETED", { ...snapshot, ...outcomeData });
     logEvent("PAGE_VIEW", { section: "ThankYou" });
   };
 
@@ -298,7 +330,13 @@ export default function Home() {
     setShowErrors(false);
 
     const isSelecting = !selectedCourses.includes(course);
-    logEvent("TOGGLE_COURSE", { course, action: isSelecting ? "select" : "deselect" });
+    setTotalEdits(prev => prev + 1);
+    logEvent("FIELD_EDIT", { 
+      field_name: "selectedCourses",
+      old_value: selectedCourses,
+      new_value: isSelecting ? [...selectedCourses, course] : selectedCourses.filter(c => c !== course),
+      was_ai_generated: false 
+    });
 
     if (selectedCourses.includes(course)) {
       setSelectedCourses(selectedCourses.filter(c => c !== course));
@@ -349,6 +387,11 @@ export default function Home() {
           mode={mode}
           submitAttempts={submitAttempts}
           setSubmitAttempts={setSubmitAttempts}
+          totalEdits={totalEdits}
+          setTotalEdits={setTotalEdits}
+          interventionCount={interventionCount}
+          setInterventionCount={setInterventionCount}
+          startTime={startTime}
         />
       );
     }
@@ -376,6 +419,8 @@ export default function Home() {
         handleSubmit={handleSubmit}
         handleCourseToggle={handleCourseToggle}
         submitAttempts={submitAttempts}
+        setTotalEdits={setTotalEdits}
+        setInterventionCount={setInterventionCount}
       />
     );
   }

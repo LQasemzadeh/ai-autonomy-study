@@ -22,6 +22,8 @@ interface MainFormProps {
     handleSubmit: () => void;
     handleCourseToggle: (course: string) => void;
     submitAttempts: number;
+    setTotalEdits: (val: (prev: number) => number) => void;
+    setInterventionCount: (val: (prev: number) => number) => void;
 }
 
 const MainForm = ({
@@ -45,7 +47,9 @@ const MainForm = ({
     logEvent,
     handleSubmit,
     handleCourseToggle,
-    submitAttempts
+    submitAttempts,
+    setTotalEdits,
+    setInterventionCount
 }: MainFormProps) => {
   const wise2025Courses = [
     "HCI (main)",
@@ -169,8 +173,14 @@ const MainForm = ({
               value={semester}
               onChange={(e) => {
                 const selectedSemester = e.target.value;
+                setTotalEdits(prev => prev + 1);
+                logEvent("FIELD_EDIT", { 
+                  field_name: "semester",
+                  old_value: semester,
+                  new_value: selectedSemester,
+                  was_ai_generated: false
+                });
                 setSemester(selectedSemester);
-                logEvent("CHANGE_SEMESTER", { value: selectedSemester });
                 
                 setIsEditable(false);
                 setConfirmed(false);
@@ -229,7 +239,7 @@ const MainForm = ({
                       setShowExecutionPreview(true);
                     }
 
-                    logEvent("SYSTEM_AUTOFILL", {
+                    logEvent("AI_SUGGESTION_ACCEPTED", {
                       semester: selectedSemester,
                       examPeriod: period,
                       selectedCourses: autoSelected,
@@ -268,8 +278,14 @@ const MainForm = ({
               value={examPeriod}
               onChange={(e) => {
                 const val = e.target.value;
+                setTotalEdits(prev => prev + 1);
+                logEvent("FIELD_EDIT", { 
+                  field_name: "examPeriod",
+                  old_value: examPeriod,
+                  new_value: val,
+                  was_ai_generated: false
+                });
                 setExamPeriod(val);
-                logEvent("CHANGE_EXAM_PERIOD", { value: val });
 
                 if (mode === "Assistance" && val) {
                   const courses = semester === "WiSe 2025" ? wise2025Courses : sose2026Courses;
@@ -316,7 +332,7 @@ const MainForm = ({
                   setConfirmed(false);
                   setShowErrors(false);
 
-                  logEvent("SYSTEM_AUTOFILL", {
+                  logEvent("AI_SUGGESTION_ACCEPTED", {
                     semester,
                     examPeriod: val,
                     selectedCourses: autoSelected,
@@ -429,8 +445,14 @@ const MainForm = ({
                   checked={confirmed}
                   onChange={(e) => {
                     const val = e.target.checked;
+                    setTotalEdits(prev => prev + 1);
+                    logEvent("FIELD_EDIT", { 
+                      field_name: "confirmed",
+                      old_value: confirmed,
+                      new_value: val,
+                      was_ai_generated: false
+                    });
                     setConfirmed(val);
-                    logEvent("CONFIRM_CHECKBOX", { confirmed: val });
                   }}
                   disabled={(mode === "Assistance" || mode === "manual") && !semester}
                   className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${((mode === "Assistance" || mode === "manual") && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -461,7 +483,8 @@ const MainForm = ({
               <button
                 type="button"
                 onClick={() => {
-                  logEvent("EDIT_CLICK");
+                  setInterventionCount(prev => prev + 1);
+                  logEvent("OVERRIDE", { action: "manual_edit_request" });
                   setIsEditable(true);
                 }}
                 className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-sm hover:bg-indigo-200 transition-all"

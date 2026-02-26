@@ -18,6 +18,11 @@ interface ExecutionPreviewProps {
   mode: string;
   submitAttempts: number;
   setSubmitAttempts: React.Dispatch<React.SetStateAction<number>>;
+  totalEdits: number;
+  setTotalEdits: (val: (prev: number) => number) => void;
+  interventionCount: number;
+  setInterventionCount: (val: (prev: number) => number) => void;
+  startTime: number | null;
 }
 
 const ExecutionPreview = ({
@@ -37,7 +42,12 @@ const ExecutionPreview = ({
   semester,
   mode,
   submitAttempts,
-  setSubmitAttempts
+  setSubmitAttempts,
+  totalEdits,
+  setTotalEdits,
+  interventionCount,
+  setInterventionCount,
+  startTime
 }: ExecutionPreviewProps) => {
   const getExamDateTime = (course: string, semester: string) => {
     // In Execution mode, it's always the 1st opportunity
@@ -92,9 +102,16 @@ const ExecutionPreview = ({
             type="checkbox"
             checked={confirmed}
             onChange={(e) => {
-              setConfirmed(e.target.checked);
+              const val = e.target.checked;
+              setTotalEdits(prev => prev + 1);
+              logEvent("FIELD_EDIT", { 
+                field_name: "confirmed_preview",
+                old_value: confirmed,
+                new_value: val,
+                was_ai_generated: false
+              });
+              setConfirmed(val);
               setShowErrors(false);
-              logEvent("CONFIRM_CHECKBOX_PREVIEW", { confirmed: e.target.checked });
             }}
             className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
           />
@@ -107,6 +124,7 @@ const ExecutionPreview = ({
         <div className="flex gap-3">
           <button
             onClick={() => {
+              const totalTimeMs = startTime ? Date.now() - startTime : 0;
               const currentSnapshot = {
                 semester,
                 selectedCourses,
@@ -115,18 +133,27 @@ const ExecutionPreview = ({
                 submitAttempts: submitAttempts + 1,
                 hasConflict: false // Usually auto-selected without conflict in Execution
               };
+
+              const outcomeData = {
+                final_valid: confirmed, // In execution, it's valid if confirmed
+                num_conflicts: 0,
+                total_edits: totalEdits,
+                intervention_count: interventionCount,
+                total_time_ms: totalTimeMs
+              };
+
               logEvent("SUBMIT_CLICK", currentSnapshot);
 
               if (!confirmed) {
                 setSubmitAttempts(prev => prev + 1);
                 setShowErrors(true);
                 setAnimateError(true);
-                logEvent("SUBMIT_ERROR_PREVIEW", { reason: "not_confirmed", ...currentSnapshot }, "system");
+                logEvent("ERROR_SHOWN", { reason: "not_confirmed", ...currentSnapshot }, "system");
                 setTimeout(() => setAnimateError(false), 500);
                 return;
               }
               setIsSubmitted(true);
-              logEvent("SUBMIT_SUCCESS", { source: "execution_preview", ...currentSnapshot });
+              logEvent("TASK_COMPLETED", { source: "execution_preview", ...currentSnapshot, ...outcomeData });
               logEvent("PAGE_VIEW", { section: "ThankYou" });
             }}
             className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all"
@@ -135,13 +162,14 @@ const ExecutionPreview = ({
           </button>
           <button
             onClick={() => {
+              setInterventionCount(prev => prev + 1);
+              logEvent("OVERRIDE", { action: "skip_execution_preview" });
               setShowExecutionPreview(false);
               setSemester("");
               setExamPeriod("");
               setSelectedCourses([]);
               setConfirmed(false);
               setShowErrors(false);
-              logEvent("SKIP_EXECUTION_PREVIEW");
             }}
             className="flex-1 py-2 bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-lg hover:bg-indigo-200 transition-all"
           >
