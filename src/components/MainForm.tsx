@@ -24,6 +24,8 @@ interface MainFormProps {
     submitAttempts: number;
     setTotalEdits: (val: (prev: number) => number) => void;
     setInterventionCount: (val: (prev: number) => number) => void;
+    isAiGenerated: boolean;
+    setIsAiGenerated: (val: boolean) => void;
 }
 
 const MainForm = ({
@@ -49,7 +51,9 @@ const MainForm = ({
     handleCourseToggle,
     submitAttempts,
     setTotalEdits,
-    setInterventionCount
+    setInterventionCount,
+    isAiGenerated,
+    setIsAiGenerated
 }: MainFormProps) => {
   const wise2025Courses = [
     "HCI (main)",
@@ -181,6 +185,7 @@ const MainForm = ({
                   was_ai_generated: false
                 });
                 setSemester(selectedSemester);
+                setIsAiGenerated(false);
                 
                 setIsEditable(false);
                 setConfirmed(false);
@@ -234,6 +239,7 @@ const MainForm = ({
                     }
 
                     setSelectedCourses(autoSelected);
+                    setIsAiGenerated(true);
 
                     if (mode === "Execution") {
                       setShowExecutionPreview(true);
@@ -279,13 +285,17 @@ const MainForm = ({
               onChange={(e) => {
                 const val = e.target.value;
                 setTotalEdits(prev => prev + 1);
+                if (isAiGenerated) {
+                    setInterventionCount(prev => prev + 1);
+                }
                 logEvent("FIELD_EDIT", { 
                   field_name: "examPeriod",
                   old_value: examPeriod,
                   new_value: val,
-                  was_ai_generated: false
+                  was_ai_generated: isAiGenerated
                 });
                 setExamPeriod(val);
+                setIsAiGenerated(false);
 
                 if (mode === "Assistance" && val) {
                   const courses = semester === "WiSe 2025" ? wise2025Courses : sose2026Courses;
@@ -329,6 +339,7 @@ const MainForm = ({
                   }
 
                   setSelectedCourses(autoSelected);
+                  setIsAiGenerated(true);
                   setConfirmed(false);
                   setShowErrors(false);
 
@@ -446,13 +457,17 @@ const MainForm = ({
                   onChange={(e) => {
                     const val = e.target.checked;
                     setTotalEdits(prev => prev + 1);
+                    if (isAiGenerated) {
+                        setInterventionCount(prev => prev + 1);
+                    }
                     logEvent("FIELD_EDIT", { 
                       field_name: "confirmed",
                       old_value: confirmed,
                       new_value: val,
-                      was_ai_generated: false
+                      was_ai_generated: isAiGenerated
                     });
                     setConfirmed(val);
+                    setIsAiGenerated(false);
                   }}
                   disabled={(mode === "Assistance" || mode === "manual") && !semester}
                   className={`mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${((mode === "Assistance" || mode === "manual") && !semester) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -485,6 +500,8 @@ const MainForm = ({
                 onClick={() => {
                   setInterventionCount(prev => prev + 1);
                   logEvent("OVERRIDE", { action: "manual_edit_request" });
+                  logEvent("AI_SUGGESTION_REJECTED", { reason: "user_requested_edit" });
+                  setIsAiGenerated(false);
                   setIsEditable(true);
                 }}
                 className="flex-1 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-semibold text-sm hover:bg-indigo-200 transition-all"

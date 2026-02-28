@@ -28,6 +28,9 @@ export default function Home() {
   const [totalEdits, setTotalEdits] = useState(0);
   const [interventionCount, setInterventionCount] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [hasCompleted, setHasCompleted] = useState(false);
 
   const [sessionId] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -53,6 +56,9 @@ export default function Home() {
         sessionStorage.setItem("last_event_seq", currentSeq.toString());
 
         const attemptId = sessionStorage.getItem(`attempts_${sessionId}`);
+        
+        // Ensure mode and attempt_id are consistent
+        const cachedMode = sessionStorage.getItem("assigned_mode") || mode;
 
         const getCurrentStep = () => {
           if (isSubmitted) return "ThankYou";
@@ -67,7 +73,7 @@ export default function Home() {
           attempt_id: attemptId ? parseInt(attemptId) : 1,
           event_seq: currentSeq,
           client_ts_ms: Date.now(),
-          mode: mode,
+          mode: cachedMode,
           actor: actor,
           timestamp_iso: new Date().toISOString(),
           action: action,
@@ -180,7 +186,9 @@ export default function Home() {
   };
 
   const handleStartRegistration = () => {
+    if (hasStarted) return;
     setShowScenario(false);
+    setHasStarted(true);
     setStartTime(Date.now());
     logEvent("TASK_STARTED");
     logEvent("PAGE_VIEW", { section: "Form" });
@@ -274,7 +282,6 @@ export default function Home() {
     if (hasConflict) errors.push("TIME_CONFLICT");
     if (!examPeriod) errors.push("MISSING_PERIOD");
 
-    const totalTimeMs = startTime ? Date.now() - startTime : 0;
     const numConflicts = hasConflict ? 1 : 0; // Simplified for this case
 
     const snapshot = {
@@ -289,12 +296,16 @@ export default function Home() {
       submitAttempts: submitAttempts + 1
     };
 
+    const intervention_rate = totalEdits > 0 ? interventionCount / totalEdits : 0;
+
     const outcomeData = {
       final_valid: isValid,
       num_conflicts: numConflicts,
       total_edits: totalEdits,
       intervention_count: interventionCount,
-      total_time_ms: totalTimeMs
+      intervention_rate,
+      had_intervention: interventionCount > 0,
+      // total_time_ms is now calculated server-side
     };
 
     logEvent("SUBMIT_CLICK", snapshot);
@@ -321,6 +332,8 @@ export default function Home() {
       }
     }
 
+    if (hasCompleted) return;
+    setHasCompleted(true);
     setIsSubmitted(true);
     logEvent("TASK_COMPLETED", { ...snapshot, ...outcomeData });
     logEvent("PAGE_VIEW", { section: "ThankYou" });
@@ -331,11 +344,16 @@ export default function Home() {
 
     const isSelecting = !selectedCourses.includes(course);
     setTotalEdits(prev => prev + 1);
+    
+    if (isAiGenerated) {
+      setInterventionCount(prev => prev + 1);
+    }
+
     logEvent("FIELD_EDIT", { 
       field_name: "selectedCourses",
       old_value: selectedCourses,
       new_value: isSelecting ? [...selectedCourses, course] : selectedCourses.filter(c => c !== course),
-      was_ai_generated: false 
+      was_ai_generated: isAiGenerated
     });
 
     if (selectedCourses.includes(course)) {
@@ -392,6 +410,10 @@ export default function Home() {
           interventionCount={interventionCount}
           setInterventionCount={setInterventionCount}
           startTime={startTime}
+          isAiGenerated={isAiGenerated}
+          setIsAiGenerated={setIsAiGenerated}
+          hasCompleted={hasCompleted}
+          setHasCompleted={setHasCompleted}
         />
       );
     }
@@ -421,6 +443,8 @@ export default function Home() {
         submitAttempts={submitAttempts}
         setTotalEdits={setTotalEdits}
         setInterventionCount={setInterventionCount}
+        isAiGenerated={isAiGenerated}
+        setIsAiGenerated={setIsAiGenerated}
       />
     );
   }

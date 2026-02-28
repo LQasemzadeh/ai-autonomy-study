@@ -23,6 +23,10 @@ interface ExecutionPreviewProps {
   interventionCount: number;
   setInterventionCount: (val: (prev: number) => number) => void;
   startTime: number | null;
+  isAiGenerated: boolean;
+  setIsAiGenerated: (val: boolean) => void;
+  hasCompleted: boolean;
+  setHasCompleted: (val: boolean) => void;
 }
 
 const ExecutionPreview = ({
@@ -47,7 +51,11 @@ const ExecutionPreview = ({
   setTotalEdits,
   interventionCount,
   setInterventionCount,
-  startTime
+  startTime,
+  isAiGenerated,
+  setIsAiGenerated,
+  hasCompleted,
+  setHasCompleted
 }: ExecutionPreviewProps) => {
   const getExamDateTime = (course: string, semester: string) => {
     // In Execution mode, it's always the 1st opportunity
@@ -104,13 +112,17 @@ const ExecutionPreview = ({
             onChange={(e) => {
               const val = e.target.checked;
               setTotalEdits(prev => prev + 1);
+              if (isAiGenerated) {
+                setInterventionCount(prev => prev + 1);
+              }
               logEvent("FIELD_EDIT", { 
                 field_name: "confirmed_preview",
                 old_value: confirmed,
                 new_value: val,
-                was_ai_generated: false
+                was_ai_generated: isAiGenerated
               });
               setConfirmed(val);
+              setIsAiGenerated(false);
               setShowErrors(false);
             }}
             className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
@@ -124,7 +136,6 @@ const ExecutionPreview = ({
         <div className="flex gap-3">
           <button
             onClick={() => {
-              const totalTimeMs = startTime ? Date.now() - startTime : 0;
               const currentSnapshot = {
                 semester,
                 selectedCourses,
@@ -134,12 +145,15 @@ const ExecutionPreview = ({
                 hasConflict: false // Usually auto-selected without conflict in Execution
               };
 
+              const intervention_rate = totalEdits > 0 ? interventionCount / totalEdits : 0;
               const outcomeData = {
                 final_valid: confirmed, // In execution, it's valid if confirmed
                 num_conflicts: 0,
                 total_edits: totalEdits,
                 intervention_count: interventionCount,
-                total_time_ms: totalTimeMs
+                intervention_rate,
+                had_intervention: interventionCount > 0,
+                // total_time_ms is now calculated server-side
               };
 
               logEvent("SUBMIT_CLICK", currentSnapshot);
@@ -152,6 +166,8 @@ const ExecutionPreview = ({
                 setTimeout(() => setAnimateError(false), 500);
                 return;
               }
+              if (hasCompleted) return;
+              setHasCompleted(true);
               setIsSubmitted(true);
               logEvent("TASK_COMPLETED", { source: "execution_preview", ...currentSnapshot, ...outcomeData });
               logEvent("PAGE_VIEW", { section: "ThankYou" });
