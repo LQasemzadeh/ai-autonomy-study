@@ -178,6 +178,17 @@ const MainForm = ({
               onChange={(e) => {
                 const selectedSemester = e.target.value;
                 setTotalEdits(prev => prev + 1);
+                
+                // If changing semester after an AI suggestion was generated, log it as an override
+                if (isAiGenerated) {
+                  logEvent("OVERRIDE", { 
+                    action: "change_semester_after_suggestion",
+                    override_type: "change_semester_after_suggestion",
+                    old_semester: semester,
+                    new_semester: selectedSemester
+                  });
+                }
+
                 logEvent("FIELD_EDIT", { 
                   field_name: "semester",
                   old_value: semester,
@@ -245,11 +256,22 @@ const MainForm = ({
                       setShowExecutionPreview(true);
                     }
 
+                    // Proposal ID for research tracking
+                    const proposal_id = `prop-${Math.random().toString(36).substring(2, 11)}`;
+
+                    logEvent("AI_SUGGESTION_SHOWN", {
+                      semester: selectedSemester,
+                      examPeriod: period,
+                      selectedCourses: autoSelected,
+                      proposal_id
+                    }, "system");
+
                     logEvent("AI_SUGGESTION_ACCEPTED", {
                       semester: selectedSemester,
                       examPeriod: period,
                       selectedCourses: autoSelected,
-                      reason: `${mode} mode auto-selection`
+                      reason: `${mode} mode auto-selection`,
+                      proposal_id
                     }, "system");
                   } else {
                     setExamPeriod("");
@@ -499,7 +521,10 @@ const MainForm = ({
                 type="button"
                 onClick={() => {
                   setInterventionCount(prev => prev + 1);
-                  logEvent("OVERRIDE", { action: "manual_edit_request" });
+                  logEvent("OVERRIDE", { 
+                    action: "manual_edit_request",
+                    override_type: "enter_edit_mode"
+                  });
                   logEvent("AI_SUGGESTION_REJECTED", { reason: "user_requested_edit" });
                   setIsAiGenerated(false);
                   setIsEditable(true);

@@ -277,9 +277,9 @@ export default function Home() {
     const isValid = isExactlyTwo && hasMainCourse && !hasConflict && examPeriod;
     
     const errors = [];
-    if (!isExactlyTwo) errors.push("NEED_EXACTLY_2");
-    if (!hasMainCourse) errors.push("NEED_MAIN_COURSE");
-    if (hasConflict) errors.push("TIME_CONFLICT");
+    if (!isExactlyTwo) errors.push("TOO_MANY_EXAMS");
+    if (!hasMainCourse) errors.push("ALIGNMENT_REQUIRED");
+    if (hasConflict) errors.push("OVERLAP");
     if (!examPeriod) errors.push("MISSING_PERIOD");
 
     const numConflicts = hasConflict ? 1 : 0; // Simplified for this case
@@ -308,7 +308,12 @@ export default function Home() {
       // total_time_ms is now calculated server-side
     };
 
-    logEvent("SUBMIT_CLICK", snapshot);
+    logEvent("SUBMIT_CLICK", {
+      ...snapshot,
+      submit_allowed: isValid,
+      validation_passed: isValid,
+      error_codes: errors
+    });
 
     if (mode === "Assistance" || mode === "manual") {
       if (!isValid) {
@@ -323,6 +328,7 @@ export default function Home() {
 
         logEvent("ERROR_SHOWN", { 
           reason,
+          error_codes: errors,
           ...snapshot 
         }, "system");
         setTimeout(() => {
@@ -335,7 +341,7 @@ export default function Home() {
     if (hasCompleted) return;
     setHasCompleted(true);
     setIsSubmitted(true);
-    logEvent("TASK_COMPLETED", { ...snapshot, ...outcomeData });
+    logEvent("TASK_COMPLETED", { ...snapshot, ...outcomeData }, "system");
     logEvent("PAGE_VIEW", { section: "ThankYou" });
   };
 

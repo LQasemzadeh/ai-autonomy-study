@@ -156,20 +156,29 @@ const ExecutionPreview = ({
                 // total_time_ms is now calculated server-side
               };
 
-              logEvent("SUBMIT_CLICK", currentSnapshot);
+              logEvent("SUBMIT_CLICK", {
+                ...currentSnapshot,
+                submit_allowed: confirmed,
+                validation_passed: confirmed,
+                error_codes: !confirmed ? ["CONFIRM_REQUIRED"] : []
+              });
 
               if (!confirmed) {
                 setSubmitAttempts(prev => prev + 1);
                 setShowErrors(true);
                 setAnimateError(true);
-                logEvent("ERROR_SHOWN", { reason: "not_confirmed", ...currentSnapshot }, "system");
+                logEvent("ERROR_SHOWN", { 
+                  reason: "not_confirmed", 
+                  error_codes: ["CONFIRM_REQUIRED"],
+                  ...currentSnapshot 
+                }, "system");
                 setTimeout(() => setAnimateError(false), 500);
                 return;
               }
               if (hasCompleted) return;
               setHasCompleted(true);
               setIsSubmitted(true);
-              logEvent("TASK_COMPLETED", { source: "execution_preview", ...currentSnapshot, ...outcomeData });
+              logEvent("TASK_COMPLETED", { source: "execution_preview", ...currentSnapshot, ...outcomeData }, "system");
               logEvent("PAGE_VIEW", { section: "ThankYou" });
             }}
             className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all"
@@ -179,7 +188,10 @@ const ExecutionPreview = ({
           <button
             onClick={() => {
               setInterventionCount(prev => prev + 1);
-              logEvent("OVERRIDE", { action: "skip_execution_preview" });
+              logEvent("OVERRIDE", { 
+                action: "skip_execution_preview",
+                override_type: "skip_proposal"
+              });
               setShowExecutionPreview(false);
               setSemester("");
               setExamPeriod("");
