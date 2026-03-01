@@ -31,6 +31,7 @@ export default function Home() {
   const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
+  const [proposalId, setProposalId] = useState<string | null>(null);
 
   const [sessionId] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -60,6 +61,25 @@ export default function Home() {
         // Ensure mode and attempt_id are consistent
         const cachedMode = sessionStorage.getItem("assigned_mode") || mode;
 
+        // Safety check for proposal_id in AI-related events
+        const aiRelatedEvents = [
+          "AI_SUGGESTION_SHOWN",
+          "AI_SUGGESTION_ACCEPTED",
+          "AI_SUGGESTION_REJECTED",
+          "OVERRIDE",
+          "FIELD_EDIT",
+          "SUBMIT_CLICK",
+          "TASK_COMPLETED"
+        ];
+
+        // proposal_id should be provided in details if it exists there, 
+        // otherwise fall back to current proposalId state for Assistance/Execution modes.
+        const effectiveProposalId = details.proposal_id || proposalId;
+
+        if (aiRelatedEvents.includes(action) && cachedMode !== "manual" && !effectiveProposalId) {
+          console.warn(`[LOG_WARNING] proposal_id missing for action: ${action}`);
+        }
+
         const getCurrentStep = () => {
           if (isSubmitted) return "ThankYou";
           if (hasConsented === true) return "Form";
@@ -77,7 +97,10 @@ export default function Home() {
           actor: actor,
           timestamp_iso: new Date().toISOString(),
           action: action,
-          details: details,
+          details: {
+            ...details,
+            proposal_id: effectiveProposalId
+          },
           current_step: getCurrentStep()
         };
         
@@ -310,8 +333,9 @@ export default function Home() {
 
     logEvent("SUBMIT_CLICK", {
       ...snapshot,
-      submit_allowed: isValid,
-      validation_passed: isValid,
+      submit_allowed: Boolean(isValid),
+      validation_passed: Boolean(isValid),
+      isValid: Boolean(isValid),
       error_codes: errors
     });
 
@@ -329,7 +353,8 @@ export default function Home() {
         logEvent("ERROR_SHOWN", { 
           reason,
           error_codes: errors,
-          ...snapshot 
+          ...snapshot,
+          proposal_id: proposalId
         }, "system");
         setTimeout(() => {
           setAnimateError(false);
@@ -341,7 +366,12 @@ export default function Home() {
     if (hasCompleted) return;
     setHasCompleted(true);
     setIsSubmitted(true);
-    logEvent("TASK_COMPLETED", { ...snapshot, ...outcomeData }, "system");
+    logEvent("TASK_COMPLETED", { 
+      ...snapshot, 
+      ...outcomeData, 
+      final_selectedCourses: selectedCourses, 
+      final_examPeriod: examPeriod 
+    }, "system");
     logEvent("PAGE_VIEW", { section: "ThankYou" });
   };
 
@@ -359,8 +389,17 @@ export default function Home() {
       field_name: "selectedCourses",
       old_value: selectedCourses,
       new_value: isSelecting ? [...selectedCourses, course] : selectedCourses.filter(c => c !== course),
-      was_ai_generated: isAiGenerated
+      was_ai_generated: isAiGenerated,
+      proposal_id: proposalId
     });
+
+    if (isAiGenerated) {
+      logEvent("OVERRIDE", {
+        action: "edit_after_suggestion",
+        override_type: "edit_selected_courses",
+        proposal_id: proposalId
+      });
+    }
 
     if (selectedCourses.includes(course)) {
       setSelectedCourses(selectedCourses.filter(c => c !== course));
@@ -391,38 +430,40 @@ export default function Home() {
       return <ScenarioView onStartRegistration={handleStartRegistration} />;
     }
 
-    if (showExecutionPreview && mode === "Execution") {
-      return (
-        <ExecutionPreview
-          selectedCourses={selectedCourses}
-          confirmed={confirmed}
-          setConfirmed={setConfirmed}
-          setShowErrors={setShowErrors}
-          showErrors={showErrors}
-          animateError={animateError}
-          setAnimateError={setAnimateError}
-          logEvent={logEvent}
-          setIsSubmitted={setIsSubmitted}
-          setShowExecutionPreview={setShowExecutionPreview}
-          setSemester={setSemester}
-          setExamPeriod={setExamPeriod}
-          setSelectedCourses={setSelectedCourses}
-          semester={semester}
-          mode={mode}
-          submitAttempts={submitAttempts}
-          setSubmitAttempts={setSubmitAttempts}
-          totalEdits={totalEdits}
-          setTotalEdits={setTotalEdits}
-          interventionCount={interventionCount}
-          setInterventionCount={setInterventionCount}
-          startTime={startTime}
-          isAiGenerated={isAiGenerated}
-          setIsAiGenerated={setIsAiGenerated}
-          hasCompleted={hasCompleted}
-          setHasCompleted={setHasCompleted}
-        />
-      );
-    }
+        if (showExecutionPreview && mode === "Execution") {
+          return (
+            <ExecutionPreview
+              selectedCourses={selectedCourses}
+              confirmed={confirmed}
+              setConfirmed={setConfirmed}
+              setShowErrors={setShowErrors}
+              showErrors={showErrors}
+              animateError={animateError}
+              setAnimateError={setAnimateError}
+              logEvent={logEvent}
+              setIsSubmitted={setIsSubmitted}
+              setShowExecutionPreview={setShowExecutionPreview}
+              setSemester={setSemester}
+              setExamPeriod={setExamPeriod}
+              setSelectedCourses={setSelectedCourses}
+              semester={semester}
+              mode={mode}
+              submitAttempts={submitAttempts}
+              setSubmitAttempts={setSubmitAttempts}
+              totalEdits={totalEdits}
+              setTotalEdits={setTotalEdits}
+              interventionCount={interventionCount}
+              setInterventionCount={setInterventionCount}
+              startTime={startTime}
+              isAiGenerated={isAiGenerated}
+              setIsAiGenerated={setIsAiGenerated}
+              hasCompleted={hasCompleted}
+              setHasCompleted={setHasCompleted}
+              proposalId={proposalId}
+              setProposalId={setProposalId}
+            />
+          );
+        }
 
     return (
       <MainForm
@@ -451,6 +492,8 @@ export default function Home() {
         setInterventionCount={setInterventionCount}
         isAiGenerated={isAiGenerated}
         setIsAiGenerated={setIsAiGenerated}
+        proposalId={proposalId}
+        setProposalId={setProposalId}
       />
     );
   }

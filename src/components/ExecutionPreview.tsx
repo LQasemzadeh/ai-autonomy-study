@@ -27,6 +27,8 @@ interface ExecutionPreviewProps {
   setIsAiGenerated: (val: boolean) => void;
   hasCompleted: boolean;
   setHasCompleted: (val: boolean) => void;
+  proposalId: string | null;
+  setProposalId: (val: string | null) => void;
 }
 
 const ExecutionPreview = ({
@@ -55,7 +57,9 @@ const ExecutionPreview = ({
   isAiGenerated,
   setIsAiGenerated,
   hasCompleted,
-  setHasCompleted
+  setHasCompleted,
+  proposalId,
+  setProposalId
 }: ExecutionPreviewProps) => {
   const getExamDateTime = (course: string, semester: string) => {
     // In Execution mode, it's always the 1st opportunity
@@ -119,8 +123,18 @@ const ExecutionPreview = ({
                 field_name: "confirmed_preview",
                 old_value: confirmed,
                 new_value: val,
-                was_ai_generated: isAiGenerated
+                was_ai_generated: isAiGenerated,
+                proposal_id: proposalId
               });
+
+              if (isAiGenerated) {
+                logEvent("OVERRIDE", {
+                  action: "manual_edit_request",
+                  override_type: "manual_confirm_edit_preview",
+                  proposal_id: proposalId
+                });
+              }
+
               setConfirmed(val);
               setIsAiGenerated(false);
               setShowErrors(false);
@@ -158,9 +172,11 @@ const ExecutionPreview = ({
 
               logEvent("SUBMIT_CLICK", {
                 ...currentSnapshot,
-                submit_allowed: confirmed,
-                validation_passed: confirmed,
-                error_codes: !confirmed ? ["CONFIRM_REQUIRED"] : []
+                submit_allowed: Boolean(confirmed),
+                validation_passed: Boolean(confirmed),
+                isValid: Boolean(confirmed),
+                error_codes: !confirmed ? ["CONFIRM_REQUIRED"] : [],
+                proposal_id: proposalId
               });
 
               if (!confirmed) {
@@ -170,7 +186,8 @@ const ExecutionPreview = ({
                 logEvent("ERROR_SHOWN", { 
                   reason: "not_confirmed", 
                   error_codes: ["CONFIRM_REQUIRED"],
-                  ...currentSnapshot 
+                  ...currentSnapshot,
+                  proposal_id: proposalId
                 }, "system");
                 setTimeout(() => setAnimateError(false), 500);
                 return;
@@ -178,7 +195,14 @@ const ExecutionPreview = ({
               if (hasCompleted) return;
               setHasCompleted(true);
               setIsSubmitted(true);
-              logEvent("TASK_COMPLETED", { source: "execution_preview", ...currentSnapshot, ...outcomeData }, "system");
+              logEvent("TASK_COMPLETED", { 
+                source: "execution_preview", 
+                ...currentSnapshot, 
+                ...outcomeData,
+                proposal_id: proposalId,
+                final_selectedCourses: selectedCourses,
+                final_examPeriod: semester === "WiSe 2025" ? "1st Opp Jan-Feb" : "1st Opp Jun-Jul"
+              }, "system");
               logEvent("PAGE_VIEW", { section: "ThankYou" });
             }}
             className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all"
@@ -190,8 +214,10 @@ const ExecutionPreview = ({
               setInterventionCount(prev => prev + 1);
               logEvent("OVERRIDE", { 
                 action: "skip_execution_preview",
-                override_type: "skip_proposal"
+                override_type: "skip_proposal",
+                proposal_id: proposalId
               });
+              setProposalId(null);
               setShowExecutionPreview(false);
               setSemester("");
               setExamPeriod("");

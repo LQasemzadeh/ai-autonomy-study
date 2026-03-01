@@ -26,6 +26,8 @@ interface MainFormProps {
     setInterventionCount: (val: (prev: number) => number) => void;
     isAiGenerated: boolean;
     setIsAiGenerated: (val: boolean) => void;
+    proposalId: string | null;
+    setProposalId: (val: string | null) => void;
 }
 
 const MainForm = ({
@@ -53,7 +55,9 @@ const MainForm = ({
     setTotalEdits,
     setInterventionCount,
     isAiGenerated,
-    setIsAiGenerated
+    setIsAiGenerated,
+    proposalId,
+    setProposalId
 }: MainFormProps) => {
   const wise2025Courses = [
     "HCI (main)",
@@ -185,15 +189,18 @@ const MainForm = ({
                     action: "change_semester_after_suggestion",
                     override_type: "change_semester_after_suggestion",
                     old_semester: semester,
-                    new_semester: selectedSemester
+                    new_semester: selectedSemester,
+                    proposal_id: proposalId
                   });
+                  setProposalId(null);
                 }
 
                 logEvent("FIELD_EDIT", { 
                   field_name: "semester",
                   old_value: semester,
                   new_value: selectedSemester,
-                  was_ai_generated: false
+                  was_ai_generated: false,
+                  proposal_id: proposalId
                 });
                 setSemester(selectedSemester);
                 setIsAiGenerated(false);
@@ -257,13 +264,14 @@ const MainForm = ({
                     }
 
                     // Proposal ID for research tracking
-                    const proposal_id = `prop-${Math.random().toString(36).substring(2, 11)}`;
+                    const newProposalId = `prop-${Math.random().toString(36).substring(2, 11)}`;
+                    setProposalId(newProposalId);
 
                     logEvent("AI_SUGGESTION_SHOWN", {
                       semester: selectedSemester,
                       examPeriod: period,
                       selectedCourses: autoSelected,
-                      proposal_id
+                      proposal_id: newProposalId
                     }, "system");
 
                     logEvent("AI_SUGGESTION_ACCEPTED", {
@@ -271,7 +279,7 @@ const MainForm = ({
                       examPeriod: period,
                       selectedCourses: autoSelected,
                       reason: `${mode} mode auto-selection`,
-                      proposal_id
+                      proposal_id: newProposalId
                     }, "system");
                   } else {
                     setExamPeriod("");
@@ -314,8 +322,19 @@ const MainForm = ({
                   field_name: "examPeriod",
                   old_value: examPeriod,
                   new_value: val,
-                  was_ai_generated: isAiGenerated
+                  was_ai_generated: isAiGenerated,
+                  proposal_id: proposalId
                 });
+
+                if (isAiGenerated) {
+                    logEvent("OVERRIDE", {
+                        action: "change_period_after_suggestion",
+                        override_type: "change_period",
+                        proposal_id: proposalId
+                    });
+                    setProposalId(null);
+                }
+
                 setExamPeriod(val);
                 setIsAiGenerated(false);
 
@@ -486,8 +505,18 @@ const MainForm = ({
                       field_name: "confirmed",
                       old_value: confirmed,
                       new_value: val,
-                      was_ai_generated: isAiGenerated
+                      was_ai_generated: isAiGenerated,
+                      proposal_id: proposalId
                     });
+
+                    if (isAiGenerated) {
+                        logEvent("OVERRIDE", {
+                            action: "manual_edit_request",
+                            override_type: "manual_confirm_edit",
+                            proposal_id: proposalId
+                        });
+                    }
+
                     setConfirmed(val);
                     setIsAiGenerated(false);
                   }}
@@ -523,9 +552,13 @@ const MainForm = ({
                   setInterventionCount(prev => prev + 1);
                   logEvent("OVERRIDE", { 
                     action: "manual_edit_request",
-                    override_type: "enter_edit_mode"
+                    override_type: "enter_edit_mode",
+                    proposal_id: proposalId
                   });
-                  logEvent("AI_SUGGESTION_REJECTED", { reason: "user_requested_edit" });
+                  logEvent("AI_SUGGESTION_REJECTED", { 
+                    reason: "user_requested_edit",
+                    proposal_id: proposalId
+                  });
                   setIsAiGenerated(false);
                   setIsEditable(true);
                 }}
