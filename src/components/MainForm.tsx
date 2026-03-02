@@ -161,6 +161,7 @@ const MainForm = ({
   const hasConflict = checkConflict();
   const showConflictWarning = ((mode === "manual" || mode === "Assistance") && hasConflict) || (showErrors && hasConflict);
   const showPeriodError = (mode === "manual" || mode === "Assistance") && showErrors && !examPeriod;
+  const showConfirmError = (mode === "manual" || mode === "Assistance") && showErrors && !confirmed;
   const showCourseError = (mode === "manual" || mode === "Assistance") && showErrors && (!isExactlyTwo || !hasMainCourse || hasConflict);
 
   return (
@@ -490,7 +491,13 @@ const MainForm = ({
           )}
 
           {mode !== "Execution" && ((mode !== "Assistance" && mode !== "manual") || semester) && (
-            <div className="pt-2">
+            <div className={`pt-2 px-2 py-2 rounded-xl transition-all duration-300 ${
+              showConfirmError
+                ? "border border-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] ring-0" 
+                : "border border-transparent"
+            } ${
+              showConfirmError && animateError ? "animate-shake bg-red-50" : ""
+            }`}>
               <label className="flex items-start cursor-pointer">
                 <input
                   type="checkbox"
@@ -527,6 +534,12 @@ const MainForm = ({
                   I confirm that I have reviewed my selection and understand the constraints and outcome.
                 </span>
               </label>
+              {showConfirmError && (
+                <p className="text-red-600 text-xs mt-1 ml-1">
+                  <span className="font-bold">ERROR: </span>
+                  Please confirm your selection.
+                </p>
+              )}
             </div>
           )}
 
@@ -536,7 +549,7 @@ const MainForm = ({
                 type="button"
                 onClick={handleSubmit}
                 disabled={
-                  !confirmed || 
+                  ((mode !== "Assistance" && mode !== "manual") && !confirmed) || 
                   ((mode !== "Assistance" && mode !== "manual") && !examPeriod) || 
                   (selectedCourses.length === 0)
                 }

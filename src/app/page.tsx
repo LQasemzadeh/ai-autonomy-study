@@ -297,13 +297,14 @@ export default function Home() {
     const hasConflict = checkConflict();
     const isExactlyTwo = selectedCourses.length === 2;
     const hasMainCourse = selectedCourses.some(c => c.toLowerCase().includes("(main)"));
-    const isValid = isExactlyTwo && hasMainCourse && !hasConflict && examPeriod;
+    const isValid = isExactlyTwo && hasMainCourse && !hasConflict && examPeriod && confirmed;
     
     const errors = [];
     if (!isExactlyTwo) errors.push("TOO_MANY_EXAMS");
     if (!hasMainCourse) errors.push("ALIGNMENT_REQUIRED");
     if (hasConflict) errors.push("OVERLAP");
     if (!examPeriod) errors.push("MISSING_PERIOD");
+    if (!confirmed) errors.push("CONFIRM_REQUIRED");
 
     const numConflicts = hasConflict ? 1 : 0; // Simplified for this case
 
@@ -345,7 +346,8 @@ export default function Home() {
         setShowErrors(true);
         setAnimateError(true);
         let reason = "";
-        if (!examPeriod) reason = "missing_period";
+        if (!confirmed) reason = "not_confirmed";
+        else if (!examPeriod) reason = "missing_period";
         else if (!isExactlyTwo) reason = "not_exactly_two";
         else if (!hasMainCourse) reason = "no_main_course";
         else if (hasConflict) reason = "time_conflict";
