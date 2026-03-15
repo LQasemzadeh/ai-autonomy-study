@@ -192,8 +192,18 @@ export default function Home() {
         // A simple way to improve equality across many users without a backend is using a fixed seed or 
         // just relying on Math.random() which is statistically equal over large N.
         // However, to make it more "equal" for a single user/session cycle if they refresh:
-        const randomIndex = Math.floor(Math.random() * 3);
-        assignedMode = modes[randomIndex];
+        // Weighted random selection to fix bias (Execution needs more participants)
+        // Current distribution: manual: 23, Assistance: 21, Execution: 12
+        // We want to increase Execution probability significantly to balance them out.
+        // Let's use a 50% chance for Execution and 25% each for manual and Assistance.
+        const rand = Math.random();
+        if (rand < 0.5) {
+          assignedMode = "Execution";
+        } else if (rand < 0.75) {
+          assignedMode = "manual";
+        } else {
+          assignedMode = "Assistance";
+        }
         sessionStorage.setItem("assigned_mode", assignedMode);
       }
     }
