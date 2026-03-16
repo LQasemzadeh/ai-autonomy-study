@@ -185,24 +185,14 @@ export default function Home() {
       if (cachedMode && modes.includes(cachedMode)) {
         assignedMode = cachedMode;
       } else {
-        // Pseudo-random balancing based on current timestamp or a counter
-        // For a more robust solution in a real app, this should be done on the server.
-        // Here we use the session count or a simple random with a slight bias if we had more info.
-        // But the requirement is "randomly and equally". 
-        // A simple way to improve equality across many users without a backend is using a fixed seed or 
-        // just relying on Math.random() which is statistically equal over large N.
-        // However, to make it more "equal" for a single user/session cycle if they refresh:
-        // Weighted random selection to fix bias (Execution needs more participants)
-        // Current distribution: manual: 23, Assistance: 21, Execution: 12
-        // We want to increase Execution probability significantly to balance them out.
-        // Let's use a 50% chance for Execution and 25% each for manual and Assistance.
+        // Equal distribution for all modes
         const rand = Math.random();
-        if (rand < 0.5) {
-          assignedMode = "Execution";
-        } else if (rand < 0.75) {
+        if (rand < 1/3) {
           assignedMode = "manual";
-        } else {
+        } else if (rand < 2/3) {
           assignedMode = "Assistance";
+        } else {
+          assignedMode = "Execution";
         }
         sessionStorage.setItem("assigned_mode", assignedMode);
       }
