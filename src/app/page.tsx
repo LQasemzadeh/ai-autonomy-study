@@ -187,9 +187,9 @@ export default function Home() {
       } else {
         // Equal distribution for all modes
         const rand = Math.random();
-        if (rand < 1/3) {
+        if (rand < 0.45) {
           assignedMode = "manual";
-        } else if (rand < 2/3) {
+        } else if (rand < 0.9) {
           assignedMode = "Assistance";
         } else {
           assignedMode = "Execution";
