@@ -185,11 +185,11 @@ export default function Home() {
       if (cachedMode && modes.includes(cachedMode)) {
         assignedMode = cachedMode;
       } else {
-        // Equal distribution for all modes (33.33% each)
+        // Increased chance for Assistance and Execution (40% each) vs manual (20%)
         const rand = Math.random();
-        if (rand < 1/3) {
+        if (rand < 0.2) {
           assignedMode = "manual";
-        } else if (rand < 2/3) {
+        } else if (rand < 0.6) {
           assignedMode = "Assistance";
         } else {
           assignedMode = "Execution";
