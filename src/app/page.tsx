@@ -14,7 +14,7 @@ export default function Home() {
   const [hasConsented, setHasConsented] = useState<boolean | null>(null);
   const [showScenario, setShowScenario] = useState(false);
   const [participantId, setParticipantId] = useState("");
-  const [mode, setMode] = useState<Mode>("manual");
+  const [mode, setMode] = useState<Mode>("Execution");
   const [semester, setSemester] = useState("");
   const [examPeriod, setExamPeriod] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
@@ -59,7 +59,11 @@ export default function Home() {
         const attemptId = sessionStorage.getItem(`attempts_${sessionId}`);
         
         // Ensure mode and attempt_id are consistent
-        const cachedMode = sessionStorage.getItem("assigned_mode") || mode;
+        let cachedMode = sessionStorage.getItem("assigned_mode") || mode;
+        const modes: Mode[] = ["manual", "Assistance", "Execution"];
+        if (!modes.includes(cachedMode as Mode)) {
+          cachedMode = "manual"; // Fallback to safe mode
+        }
 
         // Safety check for proposal_id in AI-related events
         const aiRelatedEvents = [
@@ -179,24 +183,13 @@ export default function Home() {
     let assignedMode: Mode;
     if (modeParam && modes.includes(modeParam)) {
       assignedMode = modeParam;
-      sessionStorage.setItem("assigned_mode", assignedMode);
     } else {
-      const cachedMode = sessionStorage.getItem("assigned_mode") as Mode | null;
-      if (cachedMode && modes.includes(cachedMode)) {
-        assignedMode = cachedMode;
-      } else {
-        // Significantly increased chance for Assistance and Execution (47.5% each) vs manual (5%)
-        const rand = Math.random();
-        if (rand < 0.05) {
-          assignedMode = "manual";
-        } else if (rand < 0.525) {
-          assignedMode = "Assistance";
-        } else {
-          assignedMode = "Execution";
-        }
-        sessionStorage.setItem("assigned_mode", assignedMode);
-      }
+      // Pick a random mode for equal distribution
+      const randomIndex = Math.floor(Math.random() * modes.length);
+      assignedMode = modes[randomIndex];
     }
+
+    sessionStorage.setItem("assigned_mode", assignedMode);
     
     setMode(assignedMode);
   }, []);
