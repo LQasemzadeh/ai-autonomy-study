@@ -40,7 +40,7 @@ const ScenarioView = ({ onStartRegistration }: ScenarioViewProps) => (
           The registration period is currently open. Some exams may take place at overlapping times.
         </p>
 
-        <p>
+        <p>ff
           Please review the available options carefully and complete the registration as you would in a real academic situation. Your choices will determine your final exam schedule.
         </p>
       </div>
